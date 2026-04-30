@@ -48,7 +48,8 @@ export default function SignInForm() {
       .eq("id", data.session.user.id)
       .single();
 
-    const isAdmin = profileData?.is_admin === true;
+    const profile = profileData as { is_admin: boolean | null } | null;
+    const isAdmin = profile !== null && profile.is_admin === true;
 
     if (!isAdmin) {
       await supabase.auth.signOut();

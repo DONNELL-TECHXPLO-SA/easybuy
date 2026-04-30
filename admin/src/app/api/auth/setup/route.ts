@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     const { data: existingUsers } = await adminClient.auth.admin.listUsers();
-    const existingUser = existingUsers?.users.find((u) => u.email === email);
+    const existingUser = (existingUsers?.users ?? []).find(
+      (u: { id: string; email?: string | null }) => u.email === email,
+    );
 
     let userId: string;
 
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
           first_name: firstName,
           last_name: lastName,
           is_admin: true,
-        },
+        } as any,
         { onConflict: "id" },
       );
 
