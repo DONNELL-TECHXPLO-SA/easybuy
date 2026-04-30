@@ -4,6 +4,9 @@ const nextConfig = {
     workerThreads: false,
     cpus: 1,
   },
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 module.exports = nextConfig;
