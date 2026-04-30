@@ -19,7 +19,10 @@ const CustomSelect = ({ options }) => {
     }
 
     function handleClickOutside(event) {
-      if (event.target instanceof Element && !event.target.closest(".dropdown-content")) {
+      if (
+        event.target instanceof Element &&
+        !event.target.closest(".dropdown-content")
+      ) {
         setIsOpen(false);
       }
     }
@@ -32,7 +35,10 @@ const CustomSelect = ({ options }) => {
   }, [isOpen]);
 
   return (
-    <div className="dropdown-content custom-select relative" style={{ width: "200px" }}>
+    <div
+      className="dropdown-content custom-select relative"
+      style={{ width: "200px" }}
+    >
       <div
         className={`select-selected whitespace-nowrap ${
           isOpen ? "select-arrow-active" : ""
