@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export interface ProductFormData {
   title: string;
@@ -32,19 +33,64 @@ const emptyForm: ProductFormData = {
 
 export default function ProductForm({ initialData, categories, onSubmit, onCancel, submitting }: ProductFormProps) {
   const [form, setForm] = useState<ProductFormData>({ ...emptyForm, ...initialData });
-  const [thumbnailText, setThumbnailText] = useState((initialData?.thumbnail_images ?? []).join("\n"));
-  const [previewText, setPreviewText] = useState((initialData?.preview_images ?? []).join("\n"));
+  const [uploading, setUploading] = useState(false);
+  const [uploadingType, setUploadingType] = useState<"thumbnail" | "preview" | null>(null);
 
   const set = <K extends keyof ProductFormData>(key: K, val: ProductFormData[K]) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  const uploadImages = async (files: FileList, type: "thumbnail" | "preview") => {
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    setUploadingType(type);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("type", type);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          console.error("Upload error:", response.statusText);
+          toast.error(`Failed to upload ${file.name}`);
+          continue;
+        }
+
+        const data = await response.json();
+        uploadedUrls.push(data.url);
+      }
+
+      if (uploadedUrls.length > 0) {
+        const key = type === "thumbnail" ? "thumbnail_images" : "preview_images";
+        set(key, [...form[key], ...uploadedUrls]);
+        toast.success(`${uploadedUrls.length} image(s) uploaded successfully`);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("An error occurred during upload");
+    } finally {
+      setUploading(false);
+      setUploadingType(null);
+    }
+  };
+
+  const removeImage = (type: "thumbnail" | "preview", index: number) => {
+    const key = type === "thumbnail" ? "thumbnail_images" : "preview_images";
+    const updated = form[key].filter((_, i) => i !== index);
+    set(key, updated);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit({
-      ...form,
-      thumbnail_images: thumbnailText.split("\n").map((s) => s.trim()).filter(Boolean),
-      preview_images: previewText.split("\n").map((s) => s.trim()).filter(Boolean),
-    });
+    await onSubmit(form);
   };
 
   return (
@@ -89,19 +135,88 @@ export default function ProductForm({ initialData, categories, onSubmit, onCance
           </label>
         ))}
       </div>
+
+      {/* Thumbnail Images Upload */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail Image URLs (one per line)</label>
-        <textarea rows={3} value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail Images</label>
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+          <input
+            type="file"
+            multiple
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+            onChange={(e) => uploadImages(e.target.files!, "thumbnail")}
+            disabled={uploading}
+            className="w-full"
+          />
+          <p className="text-xs text-gray-500 mt-2">Select multiple image files (JPG, PNG, WebP, GIF)</p>
+          {uploadingType === "thumbnail" && uploading && (
+            <p className="text-xs text-blue-600 mt-2">Uploading...</p>
+          )}
+        </div>
+
+        {form.thumbnail_images.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs text-gray-600 mb-2">Uploaded images ({form.thumbnail_images.length}):</p>
+            <div className="grid grid-cols-4 gap-3">
+              {form.thumbnail_images.map((url, idx) => (
+                <div key={idx} className="relative group">
+                  <img src={url} alt={`Thumbnail ${idx}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage("thumbnail", idx)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Preview Images Upload */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Preview Image URLs (one per line)</label>
-        <textarea rows={3} value={previewText} onChange={(e) => setPreviewText(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label className="block text-sm font-medium text-gray-700 mb-1">Preview Images</label>
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+          <input
+            type="file"
+            multiple
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+            onChange={(e) => uploadImages(e.target.files!, "preview")}
+            disabled={uploading}
+            className="w-full"
+          />
+          <p className="text-xs text-gray-500 mt-2">Select multiple image files (JPG, PNG, WebP, GIF)</p>
+          {uploadingType === "preview" && uploading && (
+            <p className="text-xs text-blue-600 mt-2">Uploading...</p>
+          )}
+        </div>
+
+        {form.preview_images.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs text-gray-600 mb-2">Uploaded images ({form.preview_images.length}):</p>
+            <div className="grid grid-cols-4 gap-3">
+              {form.preview_images.map((url, idx) => (
+                <div key={idx} className="relative group">
+                  <img src={url} alt={`Preview ${idx}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage("preview", idx)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-        <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+        <button type="submit" disabled={submitting || uploading} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
           {submitting ? "Saving..." : "Save Product"}
         </button>
       </div>
