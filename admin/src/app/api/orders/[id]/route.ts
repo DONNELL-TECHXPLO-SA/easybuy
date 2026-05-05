@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { sendOrderStatusUpdateEmail } from "@/lib/email-service";
-import type { Database } from "@/types/database";
 
 type OrderEmailFields = {
   billing_email: string;
@@ -83,22 +82,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Update the order status and tracking info
-    const updatePayload: any = {
+    // Update the order status in the database; tracking details are email-only.
+    const updatePayload = {
       status: parsed.data.status,
       updated_at: new Date().toISOString(),
     };
 
-    if (parsed.data.trackingNumber) {
-      updatePayload.tracking_number = parsed.data.trackingNumber;
-    }
-    if (parsed.data.estimatedDelivery) {
-      updatePayload.estimated_delivery = parsed.data.estimatedDelivery;
-    }
-
     const { data, error } = await supabase
       .from("orders")
-      .update(updatePayload)
+      .update(updatePayload as never)
       .eq("id", id)
       .select()
       .maybeSingle();
