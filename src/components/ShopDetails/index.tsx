@@ -6,6 +6,9 @@ import Newsletter from "../Common/Newsletter";
 import RecentlyViewdItems from "./RecentlyViewd";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
 import { useAppSelector } from "@/redux/store";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/redux/store";
+import { updateproductDetails } from "@/redux/features/product-details";
 import { formatZar } from "@/lib/formatCurrency";
 import type { ApiProduct } from "@/types/product";
 import { apiProductToProduct } from "@/types/product";
@@ -18,6 +21,7 @@ const ShopDetails = ({ product: productProp }: Props) => {
   const [activeColor, setActiveColor] = useState("blue");
   const { openPreviewModal } = usePreviewSlider();
   const [previewImg, setPreviewImg] = useState(0);
+  const dispatch = useDispatch<AppDispatch>();
 
   const [storage, setStorage] = useState("gb128");
   const [type, setType] = useState("active");
@@ -89,6 +93,8 @@ const ShopDetails = ({ product: productProp }: Props) => {
   const [product, setProduct] = useState(() =>
     productProp ? apiProductToProduct(productProp) : productFromRedux
   );
+  const thumbnailImages = product.imgs?.thumbnails ?? [];
+  const previewImages = product.imgs?.previews ?? [];
 
   useEffect(() => {
     if (productProp) {
@@ -104,13 +110,24 @@ const ShopDetails = ({ product: productProp }: Props) => {
   }, [productProp, productFromRedux]);
 
   useEffect(() => {
+    setPreviewImg(0);
+  }, [product?.id]);
+
+  useEffect(() => {
     if (!productProp && product && product.title) {
       localStorage.setItem("productDetails", JSON.stringify(product));
     }
   }, [productProp, product]);
 
+  useEffect(() => {
+    if (previewImg >= Math.max(thumbnailImages.length, previewImages.length)) {
+      setPreviewImg(0);
+    }
+  }, [previewImg, previewImages.length, thumbnailImages.length]);
+
   // pass the product here when you get the real data.
   const handlePreviewSlider = () => {
+    dispatch(updateproductDetails(product));
     openPreviewModal();
   };
 
@@ -150,9 +167,9 @@ const ShopDetails = ({ product: productProp }: Props) => {
                         </svg>
                       </button>
 
-                      {product.imgs?.previews?.[previewImg] && (
+                      {(previewImages[previewImg] || thumbnailImages[previewImg] || previewImages[0] || thumbnailImages[0]) && (
                         <Image
-                          src={product.imgs.previews[previewImg]}
+                          src={previewImages[previewImg] || thumbnailImages[previewImg] || previewImages[0] || thumbnailImages[0]}
                           alt="products-details"
                           width={400}
                           height={400}
@@ -163,8 +180,9 @@ const ShopDetails = ({ product: productProp }: Props) => {
 
                   {/* ?  &apos;border-blue &apos; :  &apos;border-transparent&apos; */}
                   <div className="flex flex-wrap sm:flex-nowrap gap-4.5 mt-6">
-                    {product.imgs?.thumbnails.map((item, key) => (
+                    {thumbnailImages.map((item, key) => (
                       <button
+                        type="button"
                         onClick={() => setPreviewImg(key)}
                         key={key}
                         className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${key === previewImg
@@ -637,6 +655,7 @@ const ShopDetails = ({ product: productProp }: Props) => {
                     <div className="flex flex-wrap items-center gap-4.5">
                       <div className="flex items-center rounded-md border border-gray-3">
                         <button
+                          type="button"
                           aria-label="button for remove product"
                           className="flex items-center justify-center w-12 h-12 ease-out duration-200 hover:text-blue"
                           onClick={() =>
@@ -663,6 +682,7 @@ const ShopDetails = ({ product: productProp }: Props) => {
                         </span>
 
                         <button
+                          type="button"
                           onClick={() => setQuantity(quantity + 1)}
                           aria-label="button for add product"
                           className="flex items-center justify-center w-12 h-12 ease-out duration-200 hover:text-blue"
@@ -687,15 +707,15 @@ const ShopDetails = ({ product: productProp }: Props) => {
                         </button>
                       </div>
 
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
                       >
                         Purchase Now
-                      </a>
+                      </button>
 
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="flex items-center justify-center w-12 h-12 rounded-md border border-gray-3 ease-out duration-200 hover:text-white hover:bg-dark hover:border-transparent"
                       >
                         <svg
@@ -713,7 +733,7 @@ const ShopDetails = ({ product: productProp }: Props) => {
                             fill=""
                           />
                         </svg>
-                      </a>
+                      </button>
                     </div>
                   </form>
                 </div>

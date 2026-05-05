@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
+    "@emailjs/nodejs": "^5.0.2",
     "@hookform/resolvers": "^5.2.2",
     "@reduxjs/toolkit": "^2.6.1",
     "@supabase/ssr": "^0.10.2",

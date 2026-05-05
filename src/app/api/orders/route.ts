@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import {
+  sendOrderConfirmationEmail,
+  sendAdminOrderNotification,
+} from "@/lib/email-service";
 
 const checkoutSchema = z.object({
   billing: z.object({
@@ -25,8 +29,24 @@ const checkoutSchema = z.object({
     })
     .optional(),
   shippingMethod: z.enum(["free", "fedex", "dhl"]).default("free"),
-  paymentMethod: z.enum(["bank", "cash", "paypal"]).default("bank"),
   notes: z.string().optional().default(""),
+  cartItems: z
+    .array(
+      z.object({
+        id: z.number(),
+        title: z.string(),
+        price: z.number(),
+        discountedPrice: z.number(),
+        quantity: z.number().int().positive(),
+        imgs: z
+          .object({
+            thumbnails: z.array(z.string()).optional(),
+            previews: z.array(z.string()).optional(),
+          })
+          .optional(),
+      }),
+    )
+    .optional(),
 });
 
 export async function GET() {
@@ -65,7 +85,7 @@ export async function GET() {
           quantity,
           thumbnail_image
         )
-      `
+      `,
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
@@ -78,7 +98,7 @@ export async function GET() {
   } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -102,14 +122,19 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Validation failed", details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const { billing, shipping, shippingMethod, paymentMethod, notes } =
-      parsed.data;
+    const {
+      billing,
+      shipping,
+      shippingMethod,
+      notes,
+      cartItems: clientCartItems,
+    } = parsed.data;
 
-    const { data: cartItems, error: cartError } = await supabase
+    const { data: cartItems, error: cartError } = (await supabase
       .from("cart_items")
       .select(
         `
@@ -121,30 +146,44 @@ export async function POST(request: NextRequest) {
           discounted_price,
           thumbnail_images
         )
-      `
+      `,
       )
-      .eq("user_id", user.id) as {
-        data: Array<{
-          quantity: number;
-          products: {
-            id: number;
-            title: string;
-            price: number;
-            discounted_price: number;
-            thumbnail_images: string[];
-          };
-        }> | null;
-        error: unknown;
-      };
+      .eq("user_id", user.id)) as {
+      data: Array<{
+        quantity: number;
+        products: {
+          id: number;
+          title: string;
+          price: number;
+          discounted_price: number;
+          thumbnail_images: string[];
+        };
+      }> | null;
+      error: unknown;
+    };
 
     if (cartError) {
       return NextResponse.json(
         { error: "Failed to fetch cart" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-    if (!cartItems || cartItems.length === 0) {
+    const effectiveCartItems =
+      cartItems && cartItems.length > 0
+        ? cartItems
+        : clientCartItems?.map((item) => ({
+            quantity: item.quantity,
+            products: {
+              id: item.id,
+              title: item.title,
+              price: item.price,
+              discounted_price: item.discountedPrice,
+              thumbnail_images: item.imgs?.thumbnails ?? [],
+            },
+          }));
+
+    if (!effectiveCartItems || effectiveCartItems.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
@@ -155,17 +194,19 @@ export async function POST(request: NextRequest) {
     };
 
     const shippingCost = shippingCosts[shippingMethod];
-    const subtotal = cartItems.reduce(
+    const subtotal = effectiveCartItems.reduce(
       (sum, item) => sum + item.products.discounted_price * item.quantity,
-      0
+      0,
     );
     const total = subtotal + shippingCost;
+    const paymentMethod = "bank";
+    const orderStatus = "processing";
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
         user_id: user.id,
-        status: "pending",
+        status: orderStatus,
         payment_method: paymentMethod,
         shipping_method: shippingMethod,
         shipping_cost: shippingCost,
@@ -194,11 +235,11 @@ export async function POST(request: NextRequest) {
     if (orderError || !order) {
       return NextResponse.json(
         { error: "Failed to create order" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-    const orderItemsPayload = cartItems.map((item) => ({
+    const orderItemsPayload = effectiveCartItems.map((item) => ({
       order_id: (order as { id: string }).id,
       product_id: item.products.id,
       title: item.products.title,
@@ -215,17 +256,61 @@ export async function POST(request: NextRequest) {
     if (itemsError) {
       return NextResponse.json(
         { error: "Failed to create order items" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     await supabase.from("cart_items").delete().eq("user_id", user.id);
 
+    // Send order confirmation email (non-blocking)
+    const shippingAddress = {
+      firstName: shipping?.firstName || billing.firstName,
+      lastName: shipping?.lastName || billing.lastName,
+      address: shipping?.address || billing.address,
+      city: shipping?.city || billing.city,
+      country: shipping?.country || billing.country,
+    };
+
+    const formattedOrderDate = new Date(
+      (order as any).created_at,
+    ).toLocaleDateString("en-ZA", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const emailParams = {
+      customerEmail: billing.email,
+      customerName: billing.firstName,
+      orderId: (order as { id: string }).id,
+      orderDate: formattedOrderDate,
+      items: effectiveCartItems.map((item) => ({
+        title: item.products.title,
+        quantity: item.quantity,
+        price: item.products.discounted_price,
+      })),
+      subtotal,
+      shippingCost,
+      total,
+      shippingAddress,
+      shippingMethod,
+    };
+
+    // Send confirmation email to customer (non-blocking)
+    sendOrderConfirmationEmail(emailParams).catch((err) => {
+      console.error("[Order] Failed to send confirmation email:", err);
+    });
+
+    // Send notification to admin (non-blocking)
+    sendAdminOrderNotification(emailParams).catch((err) => {
+      console.error("[Order] Failed to send admin notification:", err);
+    });
+
     return NextResponse.json({ order }, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

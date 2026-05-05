@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email Verification</title>
+    <style type="text/css">
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Euclid Circular A",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Arial,
+          sans-serif;
+        background-color: #f5f5f5;
+        line-height: 1.6;
+        color: #6c6f93;
+      }
+
+      .email-container {
+        max-width: 600px;
+        margin: 20px auto;
+        background-color: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        background: linear-gradient(135deg, #1c274c 0%, #2a3a5c 100%);
+        color: #ffffff;
+        padding: 40px 20px;
+        text-align: center;
+      }
+
+      .logo {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+      }
+
+      .header-title {
+        font-size: 24px;
+        margin: 20px 0 5px 0;
+        font-weight: 600;
+      }
+
+      .header-subtitle {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0;
+      }
+
+      .content {
+        padding: 40px 30px;
+      }
+
+      .greeting {
+        font-size: 16px;
+        color: #1c274c;
+        margin-bottom: 25px;
+        line-height: 1.8;
+      }
+
+      .section {
+        margin-bottom: 30px;
+      }
+
+      .welcome-message {
+        background: linear-gradient(
+          135deg,
+          rgba(76, 175, 80, 0.08) 0%,
+          rgba(76, 175, 80, 0.04) 100%
+        );
+        border-left: 4px solid #4caf50;
+        padding: 20px;
+        border-radius: 4px;
+        margin-bottom: 25px;
+      }
+
+      .welcome-message-title {
+        font-weight: 700;
+        color: #2e7d32;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .welcome-message-text {
+        font-size: 13px;
+        color: #388e3c;
+        line-height: 1.6;
+      }
+
+      .cta-button {
+        display: block;
+        background: linear-gradient(135deg, #1c274c 0%, #2a3a5c 100%);
+        color: #ffffff;
+        padding: 16px 40px;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 15px;
+        margin: 30px 0;
+        text-align: center;
+        letter-spacing: 0.5px;
+      }
+
+      .button-container {
+        text-align: center;
+      }
+
+      .link-section {
+        background-color: #f7f9fc;
+        padding: 20px;
+        border-radius: 6px;
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .link-label {
+        font-size: 12px;
+        color: #8d93a5;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+      }
+
+      .link-value {
+        font-size: 12px;
+        color: #2196f3;
+        word-break: break-all;
+        font-family: "Courier New", monospace;
+        background-color: #ffffff;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 25px 0;
+      }
+
+      .feature-card {
+        background-color: #f9fafb;
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .feature-icon {
+        font-size: 24px;
+        margin-bottom: 8px;
+      }
+
+      .feature-title {
+        font-weight: 600;
+        color: #1c274c;
+        font-size: 13px;
+        margin-bottom: 5px;
+      }
+
+      .feature-description {
+        font-size: 12px;
+        color: #6c6f93;
+        line-height: 1.5;
+      }
+
+      .expiration {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 152, 0, 0.08) 0%,
+          rgba(255, 152, 0, 0.04) 100%
+        );
+        border-left: 4px solid #ff9800;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+      }
+
+      .expiration-title {
+        font-weight: 700;
+        color: #e65100;
+        margin-bottom: 5px;
+        font-size: 13px;
+      }
+
+      .expiration-text {
+        font-size: 13px;
+        color: #e65100;
+        line-height: 1.6;
+      }
+
+      .security-info {
+        background-color: #f7f9fc;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 20px 0;
+        font-size: 13px;
+        color: #6c6f93;
+        line-height: 1.8;
+      }
+
+      .divider {
+        height: 1px;
+        background-color: #e5e7eb;
+        margin: 20px 0;
+      }
+
+      .footer {
+        background-color: #f7f9fc;
+        padding: 30px;
+        text-align: center;
+        font-size: 12px;
+        color: #8d93a5;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .footer-text {
+        margin-bottom: 10px;
+        line-height: 1.6;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-container {
+          margin: 0;
+          border-radius: 0;
+        }
+
+        .content {
+          padding: 20px 15px;
+        }
+
+        .header {
+          padding: 30px 15px;
+        }
+
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .cta-button {
+          font-size: 14px;
+          padding: 14px 30px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <!-- Header -->
+      <div class="header">
+        <div class="logo">EasyBuy</div>
+        <div class="header-title">Welcome to EasyBuy</div>
+        <div class="header-subtitle">Verify your email to get started</div>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+        <div class="greeting">
+          Welcome!<br /><br />
+          Thank you for signing up with EasyBuy. To complete your account setup
+          and start shopping, please verify your email address.
+        </div>
+
+        <!-- Welcome Message -->
+        <div class="welcome-message">
+          <div class="welcome-message-title">✨ You're Almost There!</div>
+          <div class="welcome-message-text">
+            Verifying your email ensures you receive important order updates and
+            account notifications.
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="section">
+          <div style="text-align: center">
+            <a href="{{verification_link}}" class="cta-button"
+              >Verify Your Email</a
+            >
+          </div>
+        </div>
+
+        <!-- Alternative Link -->
+        <div class="section">
+          <div class="link-section">
+            <div class="link-label">Or copy this link in your browser:</div>
+            <div class="link-value">{{verification_link}}</div>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="section">
+          <div
+            style="
+              font-size: 14px;
+              font-weight: 700;
+              color: #1c274c;
+              margin-bottom: 15px;
+            "
+          >
+            What You Can Do After Verification:
+          </div>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon">🛒</div>
+              <div class="feature-title">Browse & Shop</div>
+              <div class="feature-description">
+                Access our full catalog and make purchases
+              </div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">📦</div>
+              <div class="feature-title">Track Orders</div>
+              <div class="feature-description">
+                Monitor shipments in real-time
+              </div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">❤️</div>
+              <div class="feature-title">Wishlist</div>
+              <div class="feature-description">Save your favorite items</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">💰</div>
+              <div class="feature-title">Exclusive Deals</div>
+              <div class="feature-description">
+                Get access to special promotions
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expiration Notice -->
+        <div class="expiration">
+          <div class="expiration-title">⏰ Link Expires Soon</div>
+          <div class="expiration-text">
+            This verification link will expire in 24 hours. If it expires, you
+            can request a new verification email from your account settings.
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div class="security-info">
+          <strong style="color: #1c274c">🔒 Your Security Matters</strong><br />
+          We take your privacy seriously. Your email will only be used for order
+          notifications and account communications. We'll never share your
+          information with third parties.
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Quick Tips -->
+        <div class="section">
+          <div style="font-size: 13px; color: #6c6f93; line-height: 1.8">
+            <strong style="color: #1c274c">💡 Quick Tips:</strong><br />
+            • Create a strong password to keep your account secure<br />
+            • Update your profile with accurate information<br />
+            • Subscribe to our newsletter for exclusive offers<br />
+            • Add items to your wishlist for later<br />
+            • Check out our help center for any questions
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="footer-text">
+          © 2024 EasyBuy. All rights reserved.<br />
+          Welcome to our community!
+        </div>
+        <div style="margin-top: 15px; color: #a8adb8; font-size: 11px">
+          This is an automated email. Please do not reply directly to this
+          message.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

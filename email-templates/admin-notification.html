@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Order Notification</title>
+    <style type="text/css">
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Euclid Circular A",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Arial,
+          sans-serif;
+        background-color: #f5f5f5;
+        line-height: 1.6;
+        color: #6c6f93;
+      }
+
+      .email-container {
+        max-width: 600px;
+        margin: 20px auto;
+        background-color: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        background: linear-gradient(135deg, #1c274c 0%, #2a3a5c 100%);
+        color: #ffffff;
+        padding: 40px 20px;
+        text-align: center;
+      }
+
+      .logo {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+      }
+
+      .header-title {
+        font-size: 24px;
+        margin: 20px 0 5px 0;
+        font-weight: 600;
+      }
+
+      .header-subtitle {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0;
+      }
+
+      .content {
+        padding: 40px 30px;
+      }
+
+      .alert-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        color: #ffffff;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 20px;
+      }
+
+      .section {
+        margin-bottom: 30px;
+      }
+
+      .section-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1c274c;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f7f9fc;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .info-card {
+        background-color: #f7f9fc;
+        padding: 15px;
+        border-radius: 6px;
+        border-left: 3px solid #1c274c;
+      }
+
+      .info-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #8d93a5;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+      }
+
+      .info-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1c274c;
+        word-break: break-word;
+      }
+
+      .customer-box {
+        background: linear-gradient(
+          135deg,
+          rgba(28, 39, 76, 0.05) 0%,
+          rgba(28, 39, 76, 0.02) 100%
+        );
+        border: 1px solid #e5e7eb;
+        padding: 20px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+      }
+
+      .customer-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1c274c;
+        margin-bottom: 8px;
+      }
+
+      .customer-email {
+        font-size: 13px;
+        color: #6c6f93;
+        margin-bottom: 4px;
+      }
+
+      .order-summary {
+        background-color: #f9fafb;
+        padding: 20px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-size: 13px;
+      }
+
+      .summary-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .summary-label {
+        color: #6c6f93;
+      }
+
+      .summary-value {
+        font-weight: 600;
+        color: #1c274c;
+      }
+
+      .total-amount {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #1c274c 0%, #2a3a5c 100%);
+        color: #ffffff;
+        padding: 15px;
+        border-radius: 6px;
+        margin-top: 15px;
+        font-weight: 700;
+      }
+
+      .total-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .total-value {
+        font-size: 18px;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin: 30px 0;
+        justify-content: center;
+      }
+
+      .action-button {
+        display: inline-block;
+        padding: 12px 25px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 13px;
+        text-decoration: none;
+        text-align: center;
+        letter-spacing: 0.5px;
+        background: linear-gradient(135deg, #1c274c 0%, #2a3a5c 100%);
+        color: #ffffff;
+      }
+
+      .cta-text {
+        text-align: center;
+        font-size: 13px;
+        color: #8d93a5;
+        margin-top: 15px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+      }
+
+      .footer {
+        background-color: #f7f9fc;
+        padding: 30px;
+        text-align: center;
+        font-size: 12px;
+        color: #8d93a5;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .footer-text {
+        margin-bottom: 10px;
+        line-height: 1.6;
+      }
+
+      .divider {
+        height: 1px;
+        background-color: #e5e7eb;
+        margin: 20px 0;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-container {
+          margin: 0;
+          border-radius: 0;
+        }
+
+        .content {
+          padding: 20px 15px;
+        }
+
+        .header {
+          padding: 30px 15px;
+        }
+
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+          flex-direction: column;
+        }
+
+        .action-button {
+          width: 100%;
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <!-- Header -->
+      <div class="header">
+        <div class="logo">EasyBuy</div>
+        <div class="header-title">New Order Received</div>
+        <div class="header-subtitle">Order #{{order_id}}</div>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+        <div class="alert-badge">🎉 New Order Alert</div>
+
+        <!-- Quick Info Grid -->
+        <div class="section">
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-label">Order ID</div>
+              <div class="info-value">{{order_id}}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">Order Date</div>
+              <div class="info-value">{{order_date}}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">Status</div>
+              <div class="info-value" style="color: #ff9800">Processing</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">Total Amount</div>
+              <div class="info-value">${{total}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer Information -->
+        <div class="section">
+          <div class="section-title">Customer Information</div>
+          <div class="customer-box">
+            <div class="customer-name">{{customer_name}}</div>
+            <div class="customer-email">{{customer_email}}</div>
+          </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="section">
+          <div class="section-title">Order Summary</div>
+          <div class="order-summary">
+            <div class="summary-row">
+              <div class="summary-label">Subtotal:</div>
+              <div class="summary-value">${{subtotal}}</div>
+            </div>
+            <div class="summary-row">
+              <div class="summary-label">Shipping:</div>
+              <div class="summary-value">${{shipping_cost}}</div>
+            </div>
+            <div class="summary-row">
+              <div class="summary-label">Tax:</div>
+              <div class="summary-value">$0.00</div>
+            </div>
+            <div class="total-amount">
+              <div class="total-label">Total</div>
+              <div class="total-value">${{total}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Section -->
+        <div style="text-align: center">
+          <div class="cta-text">Recommended Action</div>
+          <div class="action-buttons">
+            <a href="#" class="action-button">Review Order</a>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Next Steps -->
+        <div class="section">
+          <div style="font-size: 13px; color: #6c6f93; line-height: 1.8">
+            <strong style="color: #1c274c">Next Steps:</strong><br />
+            ✓ Review the order details in your admin panel<br />
+            ✓ Verify payment and customer information<br />
+            ✓ Prepare items for packing and shipping<br />
+            ✓ Update the order status when ready to ship<br />
+            ✓ Generate shipping label and send tracking info
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="footer-text">
+          © 2024 EasyBuy. All rights reserved.<br />
+          This is an automated notification for new orders.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
