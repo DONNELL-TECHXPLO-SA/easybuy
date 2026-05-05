@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { sendOrderStatusUpdateEmail } from "@/lib/email-service";
+import type { Database } from "@/types/database";
+
+type OrderEmailFields = Pick<
+  Database["public"]["Tables"]["orders"]["Row"],
+  "billing_email" | "billing_first_name"
+>;
 
 async function assertAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -58,17 +64,21 @@ export async function PATCH(
       .eq("id", id)
       .maybeSingle();
 
-    if (fetchError || !currentOrder) {
+    const orderForEmail = currentOrder as OrderEmailFields | null;
+
+    if (fetchError || !orderForEmail) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     // Update the order status
+    const updatePayload: Database["public"]["Tables"]["orders"]["Update"] = {
+      status: parsed.data.status,
+      updated_at: new Date().toISOString(),
+    };
+
     const { data, error } = await supabase
       .from("orders")
-      .update({
-        status: parsed.data.status,
-        updated_at: new Date().toISOString(),
-      } as never)
+      .update(updatePayload as never)
       .eq("id", id)
       .select()
       .maybeSingle();
@@ -77,8 +87,8 @@ export async function PATCH(
 
     // Send status update email to customer (non-blocking)
     sendOrderStatusUpdateEmail({
-      customerEmail: currentOrder.billing_email,
-      customerName: currentOrder.billing_first_name,
+      customerEmail: orderForEmail.billing_email,
+      customerName: orderForEmail.billing_first_name,
       orderId: id,
       status: parsed.data.status,
       trackingNumber: parsed.data.trackingNumber,
