@@ -2,18 +2,24 @@
 import React from "react";
 import { Product } from "@/types/product";
 import { useModalContext } from "@/app/context/QuickViewModalContext";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { updateQuickView } from "@/redux/features/quickView-slice";
 import { addItemToCartDb } from "@/redux/features/cart-slice";
 import Image from "next/image";
 import Link from "next/link";
-import { addItemToWishlistDb } from "@/redux/features/wishlist-slice";
+import {
+  addItemToWishlistDb,
+  removeItemFromWishlistDb,
+  selectWishlistItems,
+} from "@/redux/features/wishlist-slice";
 import { formatZar } from "@/lib/formatCurrency";
 
 const SingleItem = ({ item }: { item: Product }) => {
   const { openModal } = useModalContext();
   const dispatch = useDispatch<AppDispatch>();
+  const wishlistItems = useSelector(selectWishlistItems);
+  const isInWishlist = wishlistItems.some((i) => i.id === item.id);
 
   // update the QuickView state
   const handleQuickViewUpdate = () => {
@@ -31,13 +37,22 @@ const SingleItem = ({ item }: { item: Product }) => {
   };
 
   const handleItemToWishList = () => {
-    dispatch(
-      addItemToWishlistDb({
-        ...item,
-        status: "available",
-        quantity: 1,
-      })
-    );
+    if (isInWishlist) {
+      const wishlistItem = wishlistItems.find((i) => i.id === item.id);
+      if (wishlistItem?.dbItemId) {
+        dispatch(
+          removeItemFromWishlistDb({ id: item.id, dbItemId: wishlistItem.dbItemId })
+        );
+      }
+    } else {
+      dispatch(
+        addItemToWishlistDb({
+          ...item,
+          status: "available",
+          quantity: 1,
+        })
+      );
+    }
   };
 
   return (
@@ -169,7 +184,9 @@ const SingleItem = ({ item }: { item: Product }) => {
             }}
             aria-label="button for add to fav"
             id="addFavOne"
-            className="flex items-center justify-center w-9 h-9 rounded-[5px] shadow-1 ease-out duration-200 text-dark bg-white hover:text-white hover:bg-blue"
+            className={`flex items-center justify-center w-9 h-9 rounded-[5px] shadow-1 ease-out duration-200 ${
+              isInWishlist ? "text-white bg-blue" : "text-dark bg-white hover:text-white hover:bg-blue"
+            }`}
           >
             <svg
               className="fill-current"

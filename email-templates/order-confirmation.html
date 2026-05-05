@@ -300,8 +300,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {{#items_list}}
-                            {{/items_list}}
+                            {{#items}}
+                            <tr>
+                                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+                                    <span style="font-weight: 500; color: #1c274c;">{{title}}</span>
+                                </td>
+                                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">{{quantity}}</td>
+                                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${{price}}</td>
+                            </tr>
+                            {{/items}}
                         </tbody>
                     </table>
                 </div>

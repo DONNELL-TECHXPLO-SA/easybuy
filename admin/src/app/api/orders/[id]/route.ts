@@ -4,10 +4,15 @@ import { z } from "zod";
 import { sendOrderStatusUpdateEmail } from "@/lib/email-service";
 import type { Database } from "@/types/database";
 
-type OrderEmailFields = Pick<
-  Database["public"]["Tables"]["orders"]["Row"],
-  "billing_email" | "billing_first_name"
->;
+type OrderEmailFields = {
+  billing_email: string;
+  billing_first_name: string;
+  order_items: Array<{
+    title: string;
+    quantity: number;
+    discounted_price: number;
+  }>;
+};
 
 async function assertAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -57,28 +62,43 @@ export async function PATCH(
         { status: 400 },
       );
 
-    // Fetch the current order to get customer email and name
+    // Fetch the current order to get customer email, name, and items
     const { data: currentOrder, error: fetchError } = await supabase
       .from("orders")
-      .select("billing_email, billing_first_name")
+      .select(`
+        billing_email, 
+        billing_first_name,
+        order_items (
+          title,
+          quantity,
+          discounted_price
+        )
+      `)
       .eq("id", id)
       .maybeSingle();
 
-    const orderForEmail = currentOrder as OrderEmailFields | null;
+    const orderForEmail = currentOrder as unknown as OrderEmailFields | null;
 
     if (fetchError || !orderForEmail) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Update the order status
-    const updatePayload: Database["public"]["Tables"]["orders"]["Update"] = {
+    // Update the order status and tracking info
+    const updatePayload: any = {
       status: parsed.data.status,
       updated_at: new Date().toISOString(),
     };
 
+    if (parsed.data.trackingNumber) {
+      updatePayload.tracking_number = parsed.data.trackingNumber;
+    }
+    if (parsed.data.estimatedDelivery) {
+      updatePayload.estimated_delivery = parsed.data.estimatedDelivery;
+    }
+
     const { data, error } = await supabase
       .from("orders")
-      .update(updatePayload as never)
+      .update(updatePayload)
       .eq("id", id)
       .select()
       .maybeSingle();
@@ -91,6 +111,11 @@ export async function PATCH(
       customerName: orderForEmail.billing_first_name,
       orderId: id,
       status: parsed.data.status,
+      items: orderForEmail.order_items.map((item) => ({
+        title: item.title,
+        quantity: item.quantity,
+        price: item.discounted_price,
+      })),
       trackingNumber: parsed.data.trackingNumber,
       estimatedDelivery: parsed.data.estimatedDelivery,
     }).catch((err) => {
@@ -98,7 +123,8 @@ export async function PATCH(
     });
 
     return NextResponse.json({ order: data });
-  } catch {
+  } catch (error) {
+    console.error("[Admin API] Order update error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

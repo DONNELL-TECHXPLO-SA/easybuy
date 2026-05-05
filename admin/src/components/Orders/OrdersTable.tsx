@@ -5,7 +5,18 @@ import AdminModal from "@/components/ui/AdminModal";
 import { formatZar } from "@/lib/formatCurrency";
 
 interface OrderItem { id: string; quantity: number; unit_price: number; products: { title: string } | null; }
-interface Order { id: string; status: string; total: number; billing_first_name: string; billing_last_name: string; billing_email: string; created_at: string; order_items: OrderItem[]; }
+interface Order { 
+  id: string; 
+  status: string; 
+  total: number; 
+  billing_first_name: string; 
+  billing_last_name: string; 
+  billing_email: string; 
+  created_at: string; 
+  order_items: OrderItem[]; 
+  tracking_number?: string;
+  estimated_delivery?: string;
+}
 
 const STATUS_OPTIONS = ["pending", "processing", "on-hold", "shipped", "delivered", "cancelled"] as const;
 type Status = typeof STATUS_OPTIONS[number];
@@ -28,6 +39,8 @@ export default function OrdersTable() {
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
   const [editOrder, setEditOrder] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState<Status>("pending");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [estimatedDelivery, setEstimatedDelivery] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -51,7 +64,15 @@ export default function OrdersTable() {
     if (!editOrder) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/orders/${editOrder.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) });
+      const res = await fetch(`/api/orders/${editOrder.id}`, { 
+        method: "PATCH", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ 
+          status: newStatus,
+          trackingNumber: trackingNumber || undefined,
+          estimatedDelivery: estimatedDelivery || undefined
+        }) 
+      });
       if (!res.ok) throw new Error();
       setEditOrder(null); load();
     } catch { setError("Failed to update order status."); }
@@ -69,7 +90,12 @@ export default function OrdersTable() {
     { header: "Actions", className: "text-right", render: (o: Order) => (
       <div className="flex justify-end gap-2">
         <button onClick={() => setViewOrder(o)} className="text-xs text-gray-600 hover:text-gray-900 font-medium">View</button>
-        <button onClick={() => { setEditOrder(o); setNewStatus(o.status as Status); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Status</button>
+        <button onClick={() => { 
+          setEditOrder(o); 
+          setNewStatus(o.status as Status); 
+          setTrackingNumber(o.tracking_number || "");
+          setEstimatedDelivery(o.estimated_delivery || "");
+        }} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Status</button>
       </div>
     )},
   ];
@@ -102,6 +128,8 @@ export default function OrdersTable() {
               <div><p className="text-gray-500">Email</p><p className="font-medium">{viewOrder.billing_email}</p></div>
               <div><p className="text-gray-500">Status</p><span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[viewOrder.status] ?? ""}`}>{viewOrder.status}</span></div>
               <div><p className="text-gray-500">Total</p><p className="font-semibold text-lg">{formatZar(viewOrder.total)}</p></div>
+              {viewOrder.tracking_number && <div className="col-span-2"><p className="text-gray-500">Tracking Number</p><p className="font-mono text-blue-600">{viewOrder.tracking_number}</p></div>}
+              {viewOrder.estimated_delivery && <div className="col-span-2"><p className="text-gray-500">Estimated Delivery</p><p className="font-medium">{viewOrder.estimated_delivery}</p></div>}
             </div>
             <div className="border-t pt-4">
               <p className="text-sm font-medium text-gray-700 mb-3">Items</p>
@@ -122,7 +150,7 @@ export default function OrdersTable() {
           <><button onClick={() => setEditOrder(null)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
           <button onClick={handleStatusUpdate} disabled={submitting} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">{submitting ? "Saving..." : "Update"}</button></>
         }>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <p className="text-sm text-gray-600">Order <strong>{editOrder.id.slice(0, 8)}…</strong> — current: <strong>{editOrder.status}</strong></p>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">New Status</label>
@@ -131,6 +159,21 @@ export default function OrdersTable() {
                 {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            
+            {newStatus === "shipped" && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tracking Number</label>
+                  <input type="text" value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} placeholder="e.g. FEDEX123456"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Delivery</label>
+                  <input type="text" value={estimatedDelivery} onChange={(e) => setEstimatedDelivery(e.target.value)} placeholder="e.g. 5-7 business days"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </>
+            )}
           </div>
         </AdminModal>
       )}

@@ -152,6 +152,9 @@ export const cart = createSlice({
     removeAllItemsFromCart: (state) => {
       state.items = [];
     },
+    hydrateCart: (state, action: PayloadAction<CartItem[]>) => {
+      state.items = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -237,6 +240,7 @@ export const {
   removeItemFromCart,
   updateCartItemQuantity,
   removeAllItemsFromCart,
+  hydrateCart,
 } = cart.actions;
 
 export default cart.reducer;

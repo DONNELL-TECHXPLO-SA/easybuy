@@ -12,6 +12,7 @@ import ScrollToTop from "@/components/Common/ScrollToTop";
 import PreLoader from "@/components/Common/PreLoader";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PersistenceInitializer from "@/components/Common/PersistenceInitializer";
 
 export default function ClientWrapper({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
@@ -28,6 +29,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode 
         <>
           <AuthProvider>
             <ReduxProvider>
+              <PersistenceInitializer />
               <CartModalProvider>
                 <ModalProvider>
                   <PreviewSliderProvider>

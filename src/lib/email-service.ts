@@ -38,6 +38,7 @@ export interface OrderStatusUpdateParams {
   customerName: string;
   orderId: string;
   status: string;
+  items: OrderItem[];
   trackingNumber?: string;
   estimatedDelivery?: string;
 }
@@ -63,6 +64,20 @@ export async function sendOrderConfirmationEmail(
           `• ${item.title} (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}`,
       )
       .join("\n");
+
+    const itemsHtml = params.items
+      .map(
+        (item) => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <span style="font-weight: 500; color: #1c274c;">${item.title}</span>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+      </tr>
+    `,
+      )
+      .join("");
 
     const emailContent = `
 Hi ${params.customerName},
@@ -93,23 +108,30 @@ If you have any questions, please don't hesitate to contact us.
 Best regards,
 EasyBuy Team
     `;
-
-    // Build email data with indexed items for template iteration
-    const emailData: Record<string, any> = {
-      email: params.customerEmail,
-      to_name: params.customerName,
-      subject: `Order Confirmation - #${params.orderId}`,
-      message: emailContent,
-      order_id: params.orderId,
-      order_date: params.orderDate,
-      items_list: itemsList,
-      subtotal: params.subtotal.toFixed(2),
-      shipping_cost: params.shippingCost.toFixed(2),
-      total: params.total.toFixed(2),
-      shipping_method: params.shippingMethod,
-      shipping_address: `${params.shippingAddress.firstName} ${params.shippingAddress.lastName}, ${params.shippingAddress.address}, ${params.shippingAddress.city}, ${params.shippingAddress.country}`,
-      items_count: params.items.length,
-    };
+// Build email data with indexed items for template iteration
+const emailData: Record<string, any> = {
+  email: params.customerEmail,
+  to_email: params.customerEmail, // Alias for compatibility
+  to_name: params.customerName,
+  from_name: "EasyBuy Store",
+  subject: `Order Confirmation - #${params.orderId}`,
+  message: emailContent,
+  order_id: params.orderId,
+  order_date: params.orderDate,
+  items_list: itemsList,
+  items_html: itemsHtml,
+  items: params.items.map((item) => ({
+    title: item.title,
+    quantity: item.quantity,
+    price: (item.price * item.quantity).toFixed(2),
+  })),
+  subtotal: params.subtotal.toFixed(2),
+  shipping_cost: params.shippingCost.toFixed(2),
+  total: params.total.toFixed(2),
+  shipping_method: params.shippingMethod,
+  shipping_address: `${params.shippingAddress.firstName} ${params.shippingAddress.lastName}, ${params.shippingAddress.address}, ${params.shippingAddress.city}, ${params.shippingAddress.country}`,
+  items_count: params.items.length,
+};
 
     // Add indexed items for template (item_1_title, item_1_qty, item_1_price, etc.)
     params.items.forEach((item, index) => {
@@ -158,6 +180,27 @@ export async function sendOrderStatusUpdateEmail(
       statusMessages[params.status] ||
       `Your order status has been updated to: ${params.status}`;
 
+    const itemsList = params.items
+      .map(
+        (item) =>
+          `• ${item.title} (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}`,
+      )
+      .join("\n");
+
+    const itemsHtml = params.items
+      .map(
+        (item) => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <span style="font-weight: 500; color: #1c274c;">${item.title}</span>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+      </tr>
+    `,
+      )
+      .join("");
+
     let emailContent = `
 Hi ${params.customerName},
 
@@ -168,6 +211,9 @@ Order ID: ${params.orderId}
 New Status: ${params.status.toUpperCase()}
 
 ${statusMessage}
+
+ITEMS IN THIS ORDER
+${itemsList}
 
     `;
 
@@ -201,13 +247,23 @@ EasyBuy Team
       process.env.EMAILJS_SHIPPED_TEMPLATE_ID!,
       {
         email: params.customerEmail,
+        to_email: params.customerEmail, // Alias for compatibility
         to_name: params.customerName,
+        from_name: "EasyBuy Store",
         subject: `Order Status Update - #${params.orderId}`,
         message: emailContent,
         order_id: params.orderId,
         status: params.status,
+        items_list: itemsList,
+        items_html: itemsHtml,
+        items: params.items.map((item) => ({
+          title: item.title,
+          quantity: item.quantity,
+          price: (item.price * item.quantity).toFixed(2),
+        })),
         tracking_number: params.trackingNumber || "N/A",
         estimated_delivery: params.estimatedDelivery || "N/A",
+        shipped: params.status === "shipped",
       },
     );
 
@@ -233,6 +289,20 @@ export async function sendAdminOrderNotification(
           `• ${item.title} (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}`,
       )
       .join("\n");
+
+    const itemsHtml = params.items
+      .map(
+        (item) => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <span style="font-weight: 500; color: #1c274c;">${item.title}</span>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+      </tr>
+    `,
+      )
+      .join("");
 
     const emailContent = `
 NEW ORDER RECEIVED
@@ -261,11 +331,23 @@ Please review and process this order.
     // Build email data with indexed items for template iteration
     const emailData: Record<string, any> = {
       email: process.env.ADMIN_EMAIL || "admin@easybuy.com",
+      to_email: process.env.ADMIN_EMAIL || "admin@easybuy.com", // Alias for compatibility
+      from_name: "EasyBuy Store",
       subject: `New Order - #${params.orderId}`,
       message: emailContent,
       order_id: params.orderId,
       customer_name: params.customerName,
       customer_email: params.customerEmail,
+      items_list: itemsList,
+      items_html: itemsHtml,
+      items: params.items.map((item) => ({
+        title: item.title,
+        quantity: item.quantity,
+        price: (item.price * item.quantity).toFixed(2),
+      })),
+      subtotal: params.subtotal.toFixed(2),
+      shipping_cost: params.shippingCost.toFixed(2),
+      shipping_method: params.shippingMethod,
       total: params.total.toFixed(2),
       items_count: params.items.length,
     };
