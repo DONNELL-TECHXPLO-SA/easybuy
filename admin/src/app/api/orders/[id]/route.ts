@@ -64,7 +64,8 @@ export async function PATCH(
     // Fetch the current order to get customer email, name, and items
     const { data: currentOrder, error: fetchError } = await supabase
       .from("orders")
-      .select(`
+      .select(
+        `
         billing_email, 
         billing_first_name,
         order_items (
@@ -72,7 +73,8 @@ export async function PATCH(
           quantity,
           discounted_price
         )
-      `)
+      `,
+      )
       .eq("id", id)
       .maybeSingle();
 

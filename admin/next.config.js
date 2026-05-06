@@ -6,6 +6,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "cgmlroqsxmrlifsqgbom.supabase.co",
       },
+      {
+        protocol: "https",
+        hostname: "encrypted-tbn0.gstatic.com",
+      },
     ],
   },
   experimental: {

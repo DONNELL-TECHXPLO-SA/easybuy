@@ -1,6 +1,17 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+const ALLOW_ADMIN_SETUP = process.env.ALLOW_ADMIN_SETUP === "true";
+const ADMIN_SETUP_SECRET_KEY = process.env.ADMIN_SETUP_SECRET_KEY;
+
+function isSetupAllowed(secretKey?: string) {
+  return (
+    ALLOW_ADMIN_SETUP &&
+    Boolean(ADMIN_SETUP_SECRET_KEY) &&
+    secretKey === ADMIN_SETUP_SECRET_KEY
+  );
+}
+
 /**
  * POST /api/auth/setup
  * Creates or updates an admin user with given credentials
@@ -8,11 +19,19 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!ALLOW_ADMIN_SETUP || !ADMIN_SETUP_SECRET_KEY) {
+      return NextResponse.json(
+        { error: "Admin setup is disabled" },
+        { status: 403 },
+      );
+    }
+
     const {
       email,
       password,
       firstName = "",
       lastName = "",
+      secretKey,
     } = await request.json();
 
     if (!email || !password) {
@@ -20,6 +39,10 @@ export async function POST(request: NextRequest) {
         { error: "Email and password are required" },
         { status: 400 },
       );
+    }
+
+    if (!isSetupAllowed(secretKey)) {
+      return NextResponse.json({ error: "Invalid setup key" }, { status: 401 });
     }
 
     const adminClient = createAdminClient();
@@ -102,6 +125,13 @@ export async function POST(request: NextRequest) {
  */
 export async function GET() {
   try {
+    if (!ALLOW_ADMIN_SETUP || !ADMIN_SETUP_SECRET_KEY) {
+      return NextResponse.json(
+        { error: "Admin setup is disabled" },
+        { status: 403 },
+      );
+    }
+
     const adminClient = createAdminClient();
     const { data: users } = await adminClient.auth.admin.listUsers();
 
