@@ -32,7 +32,7 @@ const SingleListItem = ({ item }: { item: Product }) => {
       addItemToCartDb({
         ...item,
         quantity: 1,
-      })
+      }),
     );
   };
 
@@ -41,7 +41,10 @@ const SingleListItem = ({ item }: { item: Product }) => {
       const wishlistItem = wishlistItems.find((i) => i.id === item.id);
       if (wishlistItem?.dbItemId) {
         dispatch(
-          removeItemFromWishlistDb({ id: item.id, dbItemId: wishlistItem.dbItemId })
+          removeItemFromWishlistDb({
+            id: item.id,
+            dbItemId: wishlistItem.dbItemId,
+          }),
         );
       }
     } else {
@@ -50,7 +53,7 @@ const SingleListItem = ({ item }: { item: Product }) => {
           ...item,
           status: "available",
           quantity: 1,
-        })
+        }),
       );
     }
   };
@@ -139,11 +142,15 @@ const SingleListItem = ({ item }: { item: Product }) => {
           <Link href={`/shop-details/${item.id}`}>{item.title}</Link>
         </h3>
 
-        <p className="text-custom-sm mb-4 line-clamp-2">{item.description || ''}</p>
+        <p className="text-custom-sm mb-4 line-clamp-2">
+          {item.description || ""}
+        </p>
 
         <span className="flex items-center gap-2 font-medium text-lg mb-4.5">
           <span className="text-dark">{formatZar(item.discountedPrice)}</span>
-          <span className="text-dark-4 line-through">{formatZar(item.price)}</span>
+          <span className="text-dark-4 line-through">
+            {formatZar(item.price)}
+          </span>
         </span>
 
         <div className="flex items-center gap-2.5">
@@ -161,7 +168,9 @@ const SingleListItem = ({ item }: { item: Product }) => {
             aria-label="button for add to fav"
             id="favBtnList"
             className={`flex items-center justify-center w-9 h-9 rounded-[5px] shadow-1 ease-out duration-200 ${
-              isInWishlist ? "text-white bg-blue" : "text-dark bg-white hover:text-blue"
+              isInWishlist
+                ? "text-white bg-blue"
+                : "text-dark bg-white hover:text-blue"
             }`}
           >
             <svg
