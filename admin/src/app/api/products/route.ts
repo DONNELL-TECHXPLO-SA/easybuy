@@ -21,6 +21,15 @@ const productSchema = z.object({
   is_best_seller: z.boolean().default(false),
   thumbnail_images: z.array(z.string()).default([]),
   preview_images: z.array(z.string()).default([]),
+  variations: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        options: z.array(z.string()),
+      })
+    )
+    .default([]),
 });
 
 export async function GET(req: NextRequest) {

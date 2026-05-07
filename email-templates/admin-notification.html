@@ -304,7 +304,15 @@
             </div>
             <div class="info-card">
               <div class="info-label">Total Amount</div>
-              <div class="info-value">${{total}}</div>
+              <div class="info-value">{{total_formatted}}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">Shipping Method</div>
+              <div class="info-value">{{shipping_method_label}}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">Shipping Cost</div>
+              <div class="info-value">{{shipping_cost_formatted}}</div>
             </div>
           </div>
         </div>
@@ -321,23 +329,72 @@
         <!-- Order Items -->
         <div class="section">
           <div class="section-title">Order Items</div>
-          <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px;">
+          <div style="overflow-x: auto">
+            <table
+              style="
+                width: 100%;
+                border-collapse: collapse;
+                margin: 10px 0;
+                font-size: 13px;
+              "
+            >
               <thead>
-                <tr style="background-color: #f7f9fc; color: #1c274c; text-align: left;">
-                  <th style="padding: 10px; border-bottom: 2px solid #e5e7eb;">Product</th>
-                  <th style="padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: center;">Qty</th>
-                  <th style="padding: 10px; border-bottom: 2px solid #e5e7eb; text-align: right;">Price</th>
+                <tr
+                  style="
+                    background-color: #f7f9fc;
+                    color: #1c274c;
+                    text-align: left;
+                  "
+                >
+                  <th style="padding: 10px; border-bottom: 2px solid #e5e7eb">
+                    Product
+                  </th>
+                  <th
+                    style="
+                      padding: 10px;
+                      border-bottom: 2px solid #e5e7eb;
+                      text-align: center;
+                    "
+                  >
+                    Qty
+                  </th>
+                  <th
+                    style="
+                      padding: 10px;
+                      border-bottom: 2px solid #e5e7eb;
+                      text-align: right;
+                    "
+                  >
+                    Price
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {{#items}}
                 <tr>
-                  <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
-                    <span style="font-weight: 600; color: #1c274c;">{{title}}</span>
+                  <td style="padding: 10px; border-bottom: 1px solid #e5e7eb">
+                    <span style="font-weight: 600; color: #1c274c"
+                      >{{title}}</span
+                    >
                   </td>
-                  <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">{{quantity}}</td>
-                  <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${{price}}</td>
+                  <td
+                    style="
+                      padding: 10px;
+                      border-bottom: 1px solid #e5e7eb;
+                      text-align: center;
+                    "
+                  >
+                    {{quantity}}
+                  </td>
+                  <td
+                    style="
+                      padding: 10px;
+                      border-bottom: 1px solid #e5e7eb;
+                      text-align: right;
+                    "
+                  >
+                    ${{price}}
+                  </td>
                 </tr>
                 {{/items}}
               </tbody>
@@ -351,19 +408,25 @@
           <div class="order-summary">
             <div class="summary-row">
               <div class="summary-label">Subtotal:</div>
-              <div class="summary-value">${{subtotal}}</div>
+              <div class="summary-value">{{subtotal_formatted}}</div>
             </div>
             <div class="summary-row">
               <div class="summary-label">Shipping:</div>
-              <div class="summary-value">${{shipping_cost}}</div>
+              <div class="summary-value">{{shipping_cost_formatted}}</div>
             </div>
+            {{#shipping_eta}}
+            <div class="summary-row">
+              <div class="summary-label">Estimated Delivery:</div>
+              <div class="summary-value">{{shipping_eta}}</div>
+            </div>
+            {{/shipping_eta}}
             <div class="summary-row">
               <div class="summary-label">Tax:</div>
-              <div class="summary-value">$0.00</div>
+              <div class="summary-value">{{tax_formatted}}</div>
             </div>
             <div class="total-amount">
               <div class="total-label">Total</div>
-              <div class="total-value">${{total}}</div>
+              <div class="total-value">{{total_formatted}}</div>
             </div>
           </div>
         </div>

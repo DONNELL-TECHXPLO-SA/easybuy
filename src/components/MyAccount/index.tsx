@@ -89,6 +89,17 @@ const MyAccount = () => {
   const [addresses, setAddresses] = useState<Address[]>([]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      toast.success("Payment successful! Your order is being processed.");
+      // Clear the query params without reloading the page
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+      setActiveTab("orders");
+    }
+  }, []);
+
+  useEffect(() => {
     const supabase = createClient();
 
     (async () => {

@@ -13,6 +13,7 @@ import PreLoader from "@/components/Common/PreLoader";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PersistenceInitializer from "@/components/Common/PersistenceInitializer";
+import { Toaster } from "react-hot-toast";
 
 export default function ClientWrapper({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
@@ -33,6 +34,7 @@ export default function ClientWrapper({ children }: { children: React.ReactNode 
               <CartModalProvider>
                 <ModalProvider>
                   <PreviewSliderProvider>
+                    <Toaster position="top-right" reverseOrder={false} />
                     <Header />
                     {children}
                     <QuickViewModal />

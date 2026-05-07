@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { AppDispatch } from "@/redux/store";
 import { useDispatch } from "react-redux";
 import {
+  type CartItem,
   removeItemFromCart,
   removeItemFromCartDb,
   updateCartItemQuantity,
@@ -11,7 +12,7 @@ import {
 import Image from "next/image";
 import { formatZar } from "@/lib/formatCurrency";
 
-const SingleItem = ({ item }) => {
+const SingleItem = ({ item }: { item: CartItem }) => {
   const [quantity, setQuantity] = useState(item.quantity);
 
   const dispatch = useDispatch<AppDispatch>();
@@ -58,9 +59,18 @@ const SingleItem = ({ item }) => {
             </div>
 
             <div>
-              <h3 className="text-dark ease-out duration-200 hover:text-blue">
+              <h3 className="text-dark ease-out duration-200 hover:text-blue mb-1">
                 <a href="#"> {item.title} </a>
               </h3>
+              {item.selectedVariations && Object.entries(item.selectedVariations).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {Object.entries(item.selectedVariations).map(([label, value]) => (
+                    <span key={label} className="text-[10px] bg-gray-2 px-2 py-0.5 rounded text-gray-600">
+                      <span className="font-medium">{label}:</span> {value}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

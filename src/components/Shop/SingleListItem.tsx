@@ -139,7 +139,7 @@ const SingleListItem = ({ item }: { item: Product }) => {
           <Link href={`/shop-details/${item.id}`}>{item.title}</Link>
         </h3>
 
-        <p className="text-custom-sm mb-4 line-clamp-2">{item.description}</p>
+        <p className="text-custom-sm mb-4 line-clamp-2">{item.description || ''}</p>
 
         <span className="flex items-center gap-2 font-medium text-lg mb-4.5">
           <span className="text-dark">{formatZar(item.discountedPrice)}</span>

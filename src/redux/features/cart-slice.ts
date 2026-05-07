@@ -13,6 +13,7 @@ export type CartItem = {
   price: number;
   discountedPrice: number;
   quantity: number;
+  selectedVariations?: Record<string, string>;
   imgs?: {
     thumbnails: string[];
     previews: string[];
@@ -42,6 +43,7 @@ export const fetchCartFromDb = createAsyncThunk(
       id: string;
       quantity: number;
       product_id: number;
+      selected_variations: Record<string, string>;
       products: {
         id: number;
         title: string;
@@ -63,7 +65,11 @@ export const addItemToCartDb = createAsyncThunk(
     const res = await fetch("/api/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product_id: item.id, quantity: item.quantity }),
+      body: JSON.stringify({ 
+        product_id: item.id, 
+        quantity: item.quantity,
+        selected_variations: item.selectedVariations || {}
+      }),
     });
     if (!res.ok) {
       if (res.status === 401) return rejectWithValue("unauthenticated");
@@ -121,19 +127,30 @@ export const clearCartDb = createAsyncThunk(
   }
 );
 
+const areVariationsSame = (v1?: Record<string, string>, v2?: Record<string, string>) => {
+  if (!v1 && !v2) return true;
+  if (!v1 || !v2) return false;
+  const keys1 = Object.keys(v1);
+  const keys2 = Object.keys(v2);
+  if (keys1.length !== keys2.length) return false;
+  return keys1.every(k => v1[k] === v2[k]);
+};
+
 export const cart = createSlice({
   name: "cart",
   initialState,
   reducers: {
     addItemToCart: (state, action: PayloadAction<CartItem>) => {
-      const { id, title, price, quantity, discountedPrice, imgs } =
+      const { id, title, price, quantity, discountedPrice, imgs, selectedVariations } =
         action.payload;
-      const existingItem = state.items.find((item) => item.id === id);
+      const existingItem = state.items.find(
+        (item) => item.id === id && areVariationsSame(item.selectedVariations, selectedVariations)
+      );
 
       if (existingItem) {
         existingItem.quantity += quantity;
       } else {
-        state.items.push({ id, title, price, quantity, discountedPrice, imgs });
+        state.items.push({ id, title, price, quantity, discountedPrice, imgs, selectedVariations });
       }
     },
     removeItemFromCart: (state, action: PayloadAction<number>) => {
@@ -167,6 +184,7 @@ export const cart = createSlice({
           price: row.products.price,
           discountedPrice: row.products.discounted_price,
           quantity: row.quantity,
+          selectedVariations: row.selected_variations,
           imgs: {
             thumbnails: row.products.thumbnail_images,
             previews: row.products.preview_images,
@@ -174,32 +192,39 @@ export const cart = createSlice({
         }));
       })
       .addCase(addItemToCartDb.pending, (state, action) => {
-        const { id, title, price, quantity, discountedPrice, imgs } =
+        const { id, title, price, quantity, discountedPrice, imgs, selectedVariations } =
           action.meta.arg;
-        const existingItem = state.items.find((item) => item.id === id);
+        const existingItem = state.items.find(
+          (item) => item.id === id && areVariationsSame(item.selectedVariations, selectedVariations)
+        );
         if (existingItem) {
           existingItem.quantity += quantity;
         } else {
-          state.items.push({ id, title, price, quantity, discountedPrice, imgs });
+          state.items.push({ id, title, price, quantity, discountedPrice, imgs, selectedVariations });
         }
       })
       .addCase(addItemToCartDb.fulfilled, (state, action) => {
         if (!action.payload) return;
         const { item, dbItemId } = action.payload;
-        const existingItem = state.items.find((i) => i.id === item.id);
+        const existingItem = state.items.find(
+          (i) => i.id === item.id && areVariationsSame(i.selectedVariations, item.selectedVariations)
+        );
         if (existingItem) {
           existingItem.dbItemId = dbItemId;
         }
       })
       .addCase(addItemToCartDb.rejected, (state, action) => {
         if (action.payload === "unauthenticated") return;
-        const id = action.meta.arg.id;
-        const quantity = action.meta.arg.quantity;
-        const existingItem = state.items.find((item) => item.id === id);
+        const { id, quantity, selectedVariations } = action.meta.arg;
+        const existingItem = state.items.find(
+          (item) => item.id === id && areVariationsSame(item.selectedVariations, selectedVariations)
+        );
         if (existingItem) {
           existingItem.quantity -= quantity;
           if (existingItem.quantity <= 0) {
-            state.items = state.items.filter((item) => item.id !== id);
+            state.items = state.items.filter(
+              (item) => !(item.id === id && areVariationsSame(item.selectedVariations, selectedVariations))
+            );
           }
         }
       })

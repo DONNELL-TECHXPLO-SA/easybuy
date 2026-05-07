@@ -20,11 +20,13 @@ This checklist covers the storefront only and excludes the payment gateway, whic
 - Add automated linting, type checking, and build checks in CI.
 - Add unit tests for core utilities and API handlers.
 - Add end-to-end tests for signup, login, cart, wishlist, profile, and order flows.
+- Add shipping calculator and outbound email tests that confirm shipping labels/costs come from persisted order snapshot fields.
 - Add structured logging and error monitoring.
 - Add health checks and a deployment readiness check.
 - Review image delivery, caching, and static asset optimization.
 - Add accessibility checks for forms, navigation, and interactive components.
 - Improve metadata, sitemap, robots.txt, and social sharing tags.
+- Verify checkout blocks submission until a valid shipping quote is loaded and the selected method matches the calculated quote.
 
 ## Nice to Have
 

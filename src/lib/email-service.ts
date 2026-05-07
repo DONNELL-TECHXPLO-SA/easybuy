@@ -1,4 +1,5 @@
 import emailjs from "@emailjs/nodejs";
+import { formatZar } from "@/lib/formatCurrency";
 
 // Initialize EmailJS with the private key for server-side sending
 emailjs.init({
@@ -10,6 +11,7 @@ export interface OrderItem {
   title: string;
   quantity: number;
   price: number;
+  selectedVariations?: Record<string, string>;
 }
 
 export interface ShippingAddress {
@@ -31,6 +33,10 @@ export interface OrderConfirmationParams {
   total: number;
   shippingAddress: ShippingAddress;
   shippingMethod: string;
+  shippingMethodLabel?: string;
+  shippingZoneCode?: string;
+  shippingEtaMinDays?: number | null;
+  shippingEtaMaxDays?: number | null;
 }
 
 export interface OrderStatusUpdateParams {
@@ -42,6 +48,44 @@ export interface OrderStatusUpdateParams {
   trackingNumber?: string;
   estimatedDelivery?: string;
 }
+
+export const resolveShippingMethodLabel = (
+  params: Pick<
+    OrderConfirmationParams,
+    "shippingMethod" | "shippingMethodLabel"
+  >,
+): string => {
+  return params.shippingMethodLabel?.trim() || params.shippingMethod;
+};
+
+export const resolveShippingEtaLabel = (
+  params: Pick<
+    OrderConfirmationParams,
+    "shippingEtaMinDays" | "shippingEtaMaxDays"
+  >,
+): string => {
+  if (params.shippingEtaMinDays == null && params.shippingEtaMaxDays == null) {
+    return "";
+  }
+
+  if (
+    params.shippingEtaMinDays != null &&
+    params.shippingEtaMaxDays != null &&
+    params.shippingEtaMinDays === params.shippingEtaMaxDays
+  ) {
+    return `${params.shippingEtaMinDays} business day${params.shippingEtaMinDays === 1 ? "" : "s"}`;
+  }
+
+  if (params.shippingEtaMinDays != null && params.shippingEtaMaxDays != null) {
+    return `${params.shippingEtaMinDays}-${params.shippingEtaMaxDays} business days`;
+  }
+
+  if (params.shippingEtaMinDays != null) {
+    return `From ${params.shippingEtaMinDays} business day${params.shippingEtaMinDays === 1 ? "" : "s"}`;
+  }
+
+  return `Up to ${params.shippingEtaMaxDays} business days`;
+};
 
 export interface ContactFormParams {
   name: string;
@@ -58,25 +102,44 @@ export async function sendOrderConfirmationEmail(
   params: OrderConfirmationParams,
 ): Promise<void> {
   try {
+    const shippingMethodLabel = resolveShippingMethodLabel(params);
+    const shippingEtaLabel = resolveShippingEtaLabel(params);
+
     const itemsList = params.items
-      .map(
-        (item) =>
-          `• ${item.title} (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}`,
-      )
+      .map((item) => {
+        const variations =
+          item.selectedVariations &&
+          Object.entries(item.selectedVariations).length > 0
+            ? ` [${Object.entries(item.selectedVariations)
+                .map(([l, v]) => `${l}: ${v}`)
+                .join(", ")}]`
+            : "";
+        return `• ${item.title}${variations} (x${item.quantity}) - ${formatZar(item.price * item.quantity)}`;
+      })
       .join("\n");
 
     const itemsHtml = params.items
-      .map(
-        (item) => `
+      .map((item) => {
+        const variationsHtml =
+          item.selectedVariations &&
+          Object.entries(item.selectedVariations).length > 0
+            ? `<div style="font-size: 11px; color: #6c6f93; margin-top: 4px;">${Object.entries(
+                item.selectedVariations,
+              )
+                .map(([l, v]) => `<strong>${l}:</strong> ${v}`)
+                .join(", ")}</div>`
+            : "";
+        return `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
           <span style="font-weight: 500; color: #1c274c;">${item.title}</span>
+          ${variationsHtml}
         </td>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatZar(item.price * item.quantity)}</td>
       </tr>
-    `,
-      )
+    `;
+      })
       .join("");
 
     const emailContent = `
@@ -92,9 +155,10 @@ ITEMS ORDERED
 ${itemsList}
 
 PRICING
-Subtotal: $${params.subtotal.toFixed(2)}
-Shipping (${params.shippingMethod}): $${params.shippingCost.toFixed(2)}
-Total: $${params.total.toFixed(2)}
+Subtotal: ${formatZar(params.subtotal)}
+Shipping (${shippingMethodLabel}): ${formatZar(params.shippingCost)}
+Total: ${formatZar(params.total)}
+${shippingEtaLabel ? `Estimated Delivery: ${shippingEtaLabel}` : ""}
 
 SHIPPING ADDRESS
 ${params.shippingAddress.firstName} ${params.shippingAddress.lastName}
@@ -108,30 +172,41 @@ If you have any questions, please don't hesitate to contact us.
 Best regards,
 EasyBuy Team
     `;
-// Build email data with indexed items for template iteration
-const emailData: Record<string, any> = {
-  email: params.customerEmail,
-  to_email: params.customerEmail, // Alias for compatibility
-  to_name: params.customerName,
-  from_name: "EasyBuy Store",
-  subject: `Order Confirmation - #${params.orderId}`,
-  message: emailContent,
-  order_id: params.orderId,
-  order_date: params.orderDate,
-  items_list: itemsList,
-  items_html: itemsHtml,
-  items: params.items.map((item) => ({
-    title: item.title,
-    quantity: item.quantity,
-    price: (item.price * item.quantity).toFixed(2),
-  })),
-  subtotal: params.subtotal.toFixed(2),
-  shipping_cost: params.shippingCost.toFixed(2),
-  total: params.total.toFixed(2),
-  shipping_method: params.shippingMethod,
-  shipping_address: `${params.shippingAddress.firstName} ${params.shippingAddress.lastName}, ${params.shippingAddress.address}, ${params.shippingAddress.city}, ${params.shippingAddress.country}`,
-  items_count: params.items.length,
-};
+    // Build email data with indexed items for template iteration
+    const emailData: Record<string, any> = {
+      email: params.customerEmail,
+      to_email: params.customerEmail, // Alias for compatibility
+      to_name: params.customerName,
+      from_name: "EasyBuy Store",
+      subject: `Order Confirmation - #${params.orderId}`,
+      message: emailContent,
+      order_id: params.orderId,
+      order_date: params.orderDate,
+      items_list: itemsList,
+      items_html: itemsHtml,
+      items: params.items.map((item) => ({
+        title: item.title,
+        quantity: item.quantity,
+        price: formatZar(item.price * item.quantity),
+        variations: item.selectedVariations
+          ? Object.entries(item.selectedVariations)
+              .map(([l, v]) => `${l}: ${v}`)
+              .join(", ")
+          : "",
+      })),
+      subtotal: formatZar(params.subtotal),
+      subtotal_formatted: formatZar(params.subtotal),
+      shipping_cost: formatZar(params.shippingCost),
+      shipping_cost_formatted: formatZar(params.shippingCost),
+      total: formatZar(params.total),
+      total_formatted: formatZar(params.total),
+      shipping_method: params.shippingMethod,
+      shipping_method_label: shippingMethodLabel,
+      shipping_eta: shippingEtaLabel || "",
+      shipping_zone_code: params.shippingZoneCode || "",
+      shipping_address: `${params.shippingAddress.firstName} ${params.shippingAddress.lastName}, ${params.shippingAddress.address}, ${params.shippingAddress.city}, ${params.shippingAddress.country}`,
+      items_count: params.items.length,
+    };
 
     // Add indexed items for template (item_1_title, item_1_qty, item_1_price, etc.)
     params.items.forEach((item, index) => {
@@ -181,24 +256,40 @@ export async function sendOrderStatusUpdateEmail(
       `Your order status has been updated to: ${params.status}`;
 
     const itemsList = params.items
-      .map(
-        (item) =>
-          `• ${item.title} (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}`,
-      )
+      .map((item) => {
+        const variations =
+          item.selectedVariations &&
+          Object.entries(item.selectedVariations).length > 0
+            ? ` [${Object.entries(item.selectedVariations)
+                .map(([l, v]) => `${l}: ${v}`)
+                .join(", ")}]`
+            : "";
+        return `• ${item.title}${variations} (x${item.quantity}) - ${formatZar(item.price * item.quantity)}`;
+      })
       .join("\n");
 
     const itemsHtml = params.items
-      .map(
-        (item) => `
+      .map((item) => {
+        const variationsHtml =
+          item.selectedVariations &&
+          Object.entries(item.selectedVariations).length > 0
+            ? `<div style="font-size: 11px; color: #6c6f93; margin-top: 4px;">${Object.entries(
+                item.selectedVariations,
+              )
+                .map(([l, v]) => `<strong>${l}:</strong> ${v}`)
+                .join(", ")}</div>`
+            : "";
+        return `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
           <span style="font-weight: 500; color: #1c274c;">${item.title}</span>
+          ${variationsHtml}
         </td>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatZar(item.price * item.quantity)}</td>
       </tr>
-    `,
-      )
+    `;
+      })
       .join("");
 
     let emailContent = `
@@ -259,7 +350,7 @@ EasyBuy Team
         items: params.items.map((item) => ({
           title: item.title,
           quantity: item.quantity,
-          price: (item.price * item.quantity).toFixed(2),
+          price: formatZar(item.price * item.quantity),
         })),
         tracking_number: params.trackingNumber || "N/A",
         estimated_delivery: params.estimatedDelivery || "N/A",
@@ -283,25 +374,44 @@ export async function sendAdminOrderNotification(
   params: OrderConfirmationParams,
 ): Promise<void> {
   try {
+    const shippingMethodLabel = resolveShippingMethodLabel(params);
+    const shippingEtaLabel = resolveShippingEtaLabel(params);
+
     const itemsList = params.items
-      .map(
-        (item) =>
-          `• ${item.title} (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}`,
-      )
+      .map((item) => {
+        const variations =
+          item.selectedVariations &&
+          Object.entries(item.selectedVariations).length > 0
+            ? ` [${Object.entries(item.selectedVariations)
+                .map(([l, v]) => `${l}: ${v}`)
+                .join(", ")}]`
+            : "";
+        return `• ${item.title}${variations} (x${item.quantity}) - ${formatZar(item.price * item.quantity)}`;
+      })
       .join("\n");
 
     const itemsHtml = params.items
-      .map(
-        (item) => `
+      .map((item) => {
+        const variationsHtml =
+          item.selectedVariations &&
+          Object.entries(item.selectedVariations).length > 0
+            ? `<div style="font-size: 11px; color: #6c6f93; margin-top: 4px;">${Object.entries(
+                item.selectedVariations,
+              )
+                .map(([l, v]) => `<strong>${l}:</strong> ${v}`)
+                .join(", ")}</div>`
+            : "";
+        return `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
           <span style="font-weight: 500; color: #1c274c;">${item.title}</span>
+          ${variationsHtml}
         </td>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatZar(item.price * item.quantity)}</td>
       </tr>
-    `,
-      )
+    `;
+      })
       .join("");
 
     const emailContent = `
@@ -315,7 +425,10 @@ Order Date: ${params.orderDate}
 ITEMS
 ${itemsList}
 
-TOTAL: $${params.total.toFixed(2)}
+TOTAL: ${formatZar(params.total)}
+
+SHIPPING METHOD: ${shippingMethodLabel}
+${shippingEtaLabel ? `ESTIMATED DELIVERY: ${shippingEtaLabel}` : ""}
 
 SHIPPING ADDRESS
 ${params.shippingAddress.firstName} ${params.shippingAddress.lastName}
@@ -343,12 +456,18 @@ Please review and process this order.
       items: params.items.map((item) => ({
         title: item.title,
         quantity: item.quantity,
-        price: (item.price * item.quantity).toFixed(2),
+        price: formatZar(item.price * item.quantity),
       })),
-      subtotal: params.subtotal.toFixed(2),
-      shipping_cost: params.shippingCost.toFixed(2),
+      subtotal: formatZar(params.subtotal),
+      subtotal_formatted: formatZar(params.subtotal),
+      shipping_cost: formatZar(params.shippingCost),
+      shipping_cost_formatted: formatZar(params.shippingCost),
+      tax_formatted: formatZar(0),
       shipping_method: params.shippingMethod,
-      total: params.total.toFixed(2),
+      shipping_method_label: shippingMethodLabel,
+      shipping_eta: shippingEtaLabel || "",
+      total: formatZar(params.total),
+      total_formatted: formatZar(params.total),
       items_count: params.items.length,
     };
 

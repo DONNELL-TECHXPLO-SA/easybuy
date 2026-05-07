@@ -28,7 +28,9 @@ const Billing = ({ register, errors }: Props) => {
               className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
             />
             {errors.billing?.firstName && (
-              <p className="text-red text-custom-sm mt-1">{errors.billing.firstName.message}</p>
+              <p className="text-red text-custom-sm mt-1">
+                {errors.billing.firstName.message}
+              </p>
             )}
           </div>
 
@@ -44,7 +46,9 @@ const Billing = ({ register, errors }: Props) => {
               className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
             />
             {errors.billing?.lastName && (
-              <p className="text-red text-custom-sm mt-1">{errors.billing.lastName.message}</p>
+              <p className="text-red text-custom-sm mt-1">
+                {errors.billing.lastName.message}
+              </p>
             )}
           </div>
         </div>
@@ -73,7 +77,9 @@ const Billing = ({ register, errors }: Props) => {
             className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
           />
           {errors.billing?.country && (
-            <p className="text-red text-custom-sm mt-1">{errors.billing.country.message}</p>
+            <p className="text-red text-custom-sm mt-1">
+              {errors.billing.country.message}
+            </p>
           )}
         </div>
 
@@ -89,7 +95,9 @@ const Billing = ({ register, errors }: Props) => {
             className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
           />
           {errors.billing?.address && (
-            <p className="text-red text-custom-sm mt-1">{errors.billing.address.message}</p>
+            <p className="text-red text-custom-sm mt-1">
+              {errors.billing.address.message}
+            </p>
           )}
           <div className="mt-5">
             <input
@@ -113,8 +121,43 @@ const Billing = ({ register, errors }: Props) => {
             className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
           />
           {errors.billing?.city && (
-            <p className="text-red text-custom-sm mt-1">{errors.billing.city.message}</p>
+            <p className="text-red text-custom-sm mt-1">
+              {errors.billing.city.message}
+            </p>
           )}
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 mb-5">
+          <div className="w-full">
+            <label htmlFor="billing.region" className="block mb-2.5">
+              Province/ Region
+            </label>
+            <input
+              type="text"
+              id="billing.region"
+              placeholder="e.g. Gauteng"
+              {...register("billing.region")}
+              className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
+            />
+          </div>
+
+          <div className="w-full">
+            <label htmlFor="billing.postalCode" className="block mb-2.5">
+              Postal Code <span className="text-red">*</span>
+            </label>
+            <input
+              type="text"
+              id="billing.postalCode"
+              placeholder="e.g. 2191"
+              {...register("billing.postalCode")}
+              className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
+            />
+            {errors.billing?.postalCode && (
+              <p className="text-red text-custom-sm mt-1">
+                {errors.billing.postalCode.message}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="mb-5">
@@ -128,7 +171,9 @@ const Billing = ({ register, errors }: Props) => {
             className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
           />
           {errors.billing?.phone && (
-            <p className="text-red text-custom-sm mt-1">{errors.billing.phone.message}</p>
+            <p className="text-red text-custom-sm mt-1">
+              {errors.billing.phone.message}
+            </p>
           )}
         </div>
 
@@ -143,7 +188,9 @@ const Billing = ({ register, errors }: Props) => {
             className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
           />
           {errors.billing?.email && (
-            <p className="text-red text-custom-sm mt-1">{errors.billing.email.message}</p>
+            <p className="text-red text-custom-sm mt-1">
+              {errors.billing.email.message}
+            </p>
           )}
         </div>
       </div>

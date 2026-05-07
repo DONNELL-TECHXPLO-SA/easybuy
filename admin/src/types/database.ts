@@ -18,9 +18,9 @@ export interface Database {
         Update: { id?: number; title?: string; img?: string; sort_order?: number; created_at?: string };
       };
       products: {
-        Row: { id: number; title: string; price: number; discounted_price: number; reviews: number; category_id: number | null; thumbnail_images: string[]; preview_images: string[]; is_featured: boolean; is_new_arrival: boolean; is_best_seller: boolean; created_at: string; updated_at: string };
-        Insert: { id?: number; title: string; price?: number; discounted_price?: number; reviews?: number; category_id?: number | null; thumbnail_images?: string[]; preview_images?: string[]; is_featured?: boolean; is_new_arrival?: boolean; is_best_seller?: boolean; created_at?: string; updated_at?: string };
-        Update: { id?: number; title?: string; price?: number; discounted_price?: number; reviews?: number; category_id?: number | null; thumbnail_images?: string[]; preview_images?: string[]; is_featured?: boolean; is_new_arrival?: boolean; is_best_seller?: boolean; created_at?: string; updated_at?: string };
+        Row: { id: number; title: string; price: number; discounted_price: number; reviews: number; category_id: number | null; thumbnail_images: string[]; preview_images: string[]; is_featured: boolean; is_new_arrival: boolean; is_best_seller: boolean; variations: Json; created_at: string; updated_at: string };
+        Insert: { id?: number; title: string; price?: number; discounted_price?: number; reviews?: number; category_id?: number | null; thumbnail_images?: string[]; preview_images?: string[]; is_featured?: boolean; is_new_arrival?: boolean; is_best_seller?: boolean; variations?: Json; created_at?: string; updated_at?: string };
+        Update: { id?: number; title?: string; price?: number; discounted_price?: number; reviews?: number; category_id?: number | null; thumbnail_images?: string[]; preview_images?: string[]; is_featured?: boolean; is_new_arrival?: boolean; is_best_seller?: boolean; variations?: Json; created_at?: string; updated_at?: string };
       };
       user_profiles: {
         Row: { id: string; first_name: string; last_name: string; phone: string; country: string; is_admin: boolean; created_at: string; updated_at: string };
@@ -33,8 +33,8 @@ export interface Database {
         Update: { id?: string; status?: string; updated_at?: string };
       };
       order_items: {
-        Row: { id: string; order_id: string; product_id: number | null; title: string; price: number; discounted_price: number; quantity: number; thumbnail_image: string };
-        Insert: { id?: string; order_id: string; product_id?: number | null; title?: string; price?: number; discounted_price?: number; quantity?: number; thumbnail_image?: string };
+        Row: { id: string; order_id: string; product_id: number | null; title: string; price: number; discounted_price: number; quantity: number; thumbnail_image: string; selected_variations: Json };
+        Insert: { id?: string; order_id: string; product_id?: number | null; title?: string; price?: number; discounted_price?: number; quantity?: number; thumbnail_image?: string; selected_variations?: Json };
         Update: Record<string, never>;
       };
       promotions: {

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ orderId: string }> }
+  { params }: { params: Promise<{ orderId: string }> },
 ) {
   try {
     const supabase = await createClient();
@@ -27,6 +27,10 @@ export async function GET(
         status,
         payment_method,
         shipping_method,
+        shipping_method_label,
+        shipping_zone_code,
+        shipping_eta_min_days,
+        shipping_eta_max_days,
         shipping_cost,
         subtotal,
         total,
@@ -54,9 +58,10 @@ export async function GET(
           price,
           discounted_price,
           quantity,
-          thumbnail_image
+          thumbnail_image,
+          selected_variations
         )
-      `
+      `,
       )
       .eq("id", orderId)
       .eq("user_id", user.id)
@@ -74,7 +79,7 @@ export async function GET(
   } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

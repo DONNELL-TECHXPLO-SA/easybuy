@@ -8,7 +8,7 @@ import { formatZar } from "@/lib/formatCurrency";
 interface Product {
   id: number; title: string; price: number; discounted_price: number; reviews: number;
   category_id: number | null; is_featured: boolean; is_new_arrival: boolean; is_best_seller: boolean;
-  thumbnail_images: string[]; preview_images: string[]; created_at: string;
+  thumbnail_images: string[]; preview_images: string[]; variations: ProductFormData["variations"]; created_at: string;
 }
 
 interface Category { id: number; title: string; }

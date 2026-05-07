@@ -21,6 +21,13 @@ const productUpdateSchema = z.object({
   is_best_seller: z.boolean().optional(),
   thumbnail_images: z.array(z.string()).optional(),
   preview_images: z.array(z.string()).optional(),
+  variations: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      options: z.array(z.string()),
+    })
+  ).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -538,7 +538,7 @@ export type DbContactMessage = Tables<"contact_messages">;
 export type DbPromotion = Tables<"promotions">;
 export type DbSiteSettings = Tables<"site_settings">;
 
-export type OrderStatus = "pending" | "processing" | "on-hold" | "delivered" | "cancelled";
-export type PaymentMethod = "bank" | "cash" | "paypal";
+export type OrderStatus = "pending" | "pending_payment" | "processing" | "on-hold" | "shipped" | "delivered" | "cancelled";
+export type PaymentMethod = "bank" | "cash" | "paypal" | "payfast";
 export type ShippingMethod = "free" | "fedex" | "dhl";
 export type AddressType = "billing" | "shipping" | "both";

@@ -16,24 +16,57 @@ import Shipping from "./Shipping";
 import ShippingMethod from "./ShippingMethod";
 import Coupon from "./Coupon";
 import Billing from "./Billing";
-import {
-  checkoutSchema,
-  CheckoutFormData,
-  SHIPPING_COSTS,
-} from "./checkoutSchema";
+import { checkoutSchema, CheckoutFormData } from "./checkoutSchema";
 import { formatZar } from "@/lib/formatCurrency";
 import { FieldErrors } from "react-hook-form";
+import { ShippingMethodQuote } from "@/types/shipping";
+
+type ShippingQuoteResponse = {
+  subtotal: number;
+  shippingCost: number;
+  total: number;
+  selectedMethodCode: string | null;
+  availableMethods: ShippingMethodQuote[];
+};
+
+const buildDestinationFromForm = (data: CheckoutFormData) => {
+  const shippingCountry = data.shipping?.country?.trim();
+  const shippingPostalCode = data.shipping?.postalCode?.trim();
+  const useShippingDestination = Boolean(shippingCountry && shippingPostalCode);
+
+  if (useShippingDestination) {
+    return {
+      country: shippingCountry!,
+      region: data.shipping?.region?.trim() || "",
+      city: data.shipping?.city?.trim() || "",
+      postalCode: shippingPostalCode!,
+    };
+  }
+
+  return {
+    country: data.billing.country.trim(),
+    region: data.billing.region?.trim() || "",
+    city: data.billing.city.trim(),
+    postalCode: data.billing.postalCode.trim(),
+  };
+};
 
 const Checkout = () => {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useSelector((state: RootState) => state.cartReducer.items);
   const [cartReady, setCartReady] = React.useState(false);
+  const [quote, setQuote] = React.useState<ShippingQuoteResponse | null>(null);
+  const [quoteLoading, setQuoteLoading] = React.useState(false);
+  const [quoteError, setQuoteError] = React.useState<string | null>(null);
+  const [quoteStale, setQuoteStale] = React.useState(true);
 
   const {
     register,
     handleSubmit,
     watch,
+    getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema) as Resolver<CheckoutFormData>,
@@ -43,6 +76,14 @@ const Checkout = () => {
   });
 
   const shippingMethod = watch("shippingMethod");
+  const billingCountry = watch("billing.country");
+  const billingRegion = watch("billing.region");
+  const billingCity = watch("billing.city");
+  const billingPostalCode = watch("billing.postalCode");
+  const shippingCountry = watch("shipping.country");
+  const shippingRegion = watch("shipping.region");
+  const shippingCity = watch("shipping.city");
+  const shippingPostalCode = watch("shipping.postalCode");
 
   React.useEffect(() => {
     let isMounted = true;
@@ -64,12 +105,106 @@ const Checkout = () => {
     };
   }, [dispatch]);
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.discountedPrice * item.quantity,
-    0,
-  );
-  const shippingCost = SHIPPING_COSTS[shippingMethod] ?? 0;
-  const total = subtotal + shippingCost;
+  React.useEffect(() => {
+    if (!cartReady) return;
+
+    if (cartItems.length === 0) {
+      setQuote(null);
+      setQuoteError(null);
+      setQuoteStale(false);
+      return;
+    }
+
+    const formValues = getValues();
+    const destination = buildDestinationFromForm(formValues);
+
+    if (!destination.country || !destination.postalCode) {
+      setQuote(null);
+      setQuoteError(
+        "Enter destination country and postal code to view shipping methods.",
+      );
+      setQuoteStale(true);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    setQuoteLoading(true);
+    setQuoteStale(true);
+
+    (async () => {
+      try {
+        const response = await fetch("/api/shipping/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            destination,
+            selectedMethodCode: shippingMethod,
+          }),
+          signal: controller.signal,
+        });
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          setQuote(null);
+          setQuoteError(payload.error || "Failed to calculate shipping.");
+          setQuoteStale(true);
+          return;
+        }
+
+        setQuote(payload as ShippingQuoteResponse);
+        setQuoteError(null);
+        setQuoteStale(false);
+
+        if (
+          payload.selectedMethodCode &&
+          payload.selectedMethodCode !== shippingMethod
+        ) {
+          setValue("shippingMethod", payload.selectedMethodCode, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setQuote(null);
+        setQuoteError("Failed to calculate shipping.");
+        setQuoteStale(true);
+      } finally {
+        if (!controller.signal.aborted) {
+          setQuoteLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      controller.abort();
+    };
+  }, [
+    cartReady,
+    cartItems,
+    shippingMethod,
+    billingCountry,
+    billingRegion,
+    billingCity,
+    billingPostalCode,
+    shippingCountry,
+    shippingRegion,
+    shippingCity,
+    shippingPostalCode,
+    getValues,
+    setValue,
+  ]);
+
+  const subtotal =
+    quote?.subtotal ??
+    cartItems.reduce(
+      (sum, item) => sum + item.discountedPrice * item.quantity,
+      0,
+    );
+  const shippingCost = quote?.shippingCost ?? 0;
+  const total = quote?.total ?? subtotal;
 
   const onSubmit = async (data: CheckoutFormData) => {
     if (!cartReady) {
@@ -79,6 +214,11 @@ const Checkout = () => {
 
     if (cartItems.length === 0) {
       toast.error("Your cart is empty.");
+      return;
+    }
+
+    if (quoteLoading || quoteStale || !quote) {
+      toast.error("Please wait for shipping rates to be calculated.");
       return;
     }
 
@@ -99,17 +239,22 @@ const Checkout = () => {
         return;
       }
 
+      const json = await res.json();
+
       if (!res.ok) {
-        const json = await res.json();
         toast.error(json.error || "Failed to place order.");
         return;
       }
 
-      dispatch(removeAllItemsFromCart());
-      toast.success(
-        "Order placed. Payment was simulated for pre-deploy testing.",
-      );
-      router.push("/my-account");
+      if (json.redirectUrl) {
+        toast.success("Order created. Redirecting to payment...");
+        window.location.href = json.redirectUrl;
+      } else {
+        // Fallback or legacy flow
+        dispatch(removeAllItemsFromCart());
+        toast.success("Order placed successfully.");
+        router.push("/my-account");
+      }
     } catch (error) {
       console.error("Checkout submit failed", error);
       toast.error("An unexpected error occurred.");
@@ -137,12 +282,20 @@ const Checkout = () => {
       toast.error("Please enter your city.");
       return;
     }
+    if (formErrors.billing?.postalCode) {
+      toast.error("Please enter your postal code.");
+      return;
+    }
     if (formErrors.billing?.phone) {
       toast.error("Please enter your phone number.");
       return;
     }
     if (formErrors.billing?.email) {
       toast.error("Please enter a valid email address.");
+      return;
+    }
+    if (formErrors.shippingMethod) {
+      toast.error("Please select a shipping method.");
       return;
     }
 
@@ -242,7 +395,13 @@ const Checkout = () => {
 
                 <Coupon />
 
-                <ShippingMethod register={register} value={shippingMethod} />
+                <ShippingMethod
+                  register={register}
+                  value={shippingMethod}
+                  methods={quote?.availableMethods ?? []}
+                  loading={quoteLoading}
+                  error={quoteError}
+                />
 
                 <div className="bg-white shadow-1 rounded-[10px] mt-7.5">
                   <div className="border-b border-gray-3 py-5 px-4 sm:px-8.5">
@@ -251,10 +410,9 @@ const Checkout = () => {
 
                   <div className="p-4 sm:p-8.5">
                     <p className="text-dark-4 leading-relaxed">
-                      Payment is currently simulated for pre-deployment testing.
-                      Orders are marked as processing automatically so they can
-                      be reviewed and approved in admin. A live payment gateway
-                      will replace this after deployment.
+                      Secure payment via <strong>PayFast</strong>. You will be redirected
+                       to a secure payment page to complete your purchase. We do
+                      not store your card details.
                     </p>
                   </div>
                 </div>
@@ -262,15 +420,22 @@ const Checkout = () => {
                 <button
                   type="submit"
                   disabled={
-                    isSubmitting || !cartReady || cartItems.length === 0
+                    isSubmitting ||
+                    !cartReady ||
+                    cartItems.length === 0 ||
+                    quoteLoading ||
+                    quoteStale ||
+                    !quote
                   }
                   className="w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {!cartReady
                     ? "Loading Cart..."
-                    : isSubmitting
-                      ? "Placing Order..."
-                      : "Place Order"}
+                    : quoteLoading
+                      ? "Calculating Shipping..."
+                      : isSubmitting
+                        ? "Placing Order..."
+                        : "Place Order"}
                 </button>
               </div>
             </div>

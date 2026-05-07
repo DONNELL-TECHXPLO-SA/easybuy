@@ -5,6 +5,7 @@ export type OrderItem = {
   discounted_price: number;
   quantity: number;
   thumbnail_image: string;
+  selected_variations?: Record<string, string>;
 };
 
 export type Order = {
@@ -12,6 +13,10 @@ export type Order = {
   status: string;
   payment_method: string;
   shipping_method: string;
+  shipping_method_label?: string;
+  shipping_zone_code?: string;
+  shipping_eta_min_days?: number | null;
+  shipping_eta_max_days?: number | null;
   shipping_cost: number;
   subtotal: number;
   total: number;

@@ -10,6 +10,7 @@ type OrderEmailFields = {
     title: string;
     quantity: number;
     discounted_price: number;
+    selected_variations?: Record<string, string>;
   }>;
 };
 
@@ -71,7 +72,8 @@ export async function PATCH(
         order_items (
           title,
           quantity,
-          discounted_price
+          discounted_price,
+          selected_variations
         )
       `,
       )
@@ -109,6 +111,7 @@ export async function PATCH(
         title: item.title,
         quantity: item.quantity,
         price: item.discounted_price,
+        selectedVariations: item.selected_variations ?? {},
       })),
       trackingNumber: parsed.data.trackingNumber,
       estimatedDelivery: parsed.data.estimatedDelivery,

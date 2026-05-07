@@ -1,5 +1,14 @@
+export type VariationOption = string;
+
+export type Variation = {
+  id: string;
+  label: string;
+  options: VariationOption[];
+};
+
 export type Product = {
   title: string;
+  description?: string;
   reviews: number;
   price: number;
   discountedPrice: number;
@@ -8,6 +17,7 @@ export type Product = {
     thumbnails: string[];
     previews: string[];
   };
+  variations?: Variation[];
 };
 
 export type ApiProduct = {
@@ -22,6 +32,7 @@ export type ApiProduct = {
   is_featured: boolean;
   is_new_arrival: boolean;
   is_best_seller: boolean;
+  variations: Variation[];
   created_at: string;
   updated_at: string;
 };
@@ -46,6 +57,7 @@ export function apiProductToProduct(p: ApiProduct): Product {
   return {
     id: p.id,
     title: p.title,
+    description: undefined,
     price: p.price,
     discountedPrice: p.discounted_price,
     reviews: p.reviews,
@@ -53,5 +65,6 @@ export function apiProductToProduct(p: ApiProduct): Product {
       thumbnails: p.thumbnail_images ?? [],
       previews: p.preview_images ?? [],
     },
+    variations: p.variations ?? [],
   };
 }

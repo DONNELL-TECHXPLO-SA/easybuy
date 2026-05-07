@@ -20,11 +20,26 @@ const QuickViewModal = () => {
   const { isModalOpen, closeModal } = useModalContext();
   const { openPreviewModal } = usePreviewSlider();
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariations, setSelectedVariations] = useState<Record<string, string>>({});
 
   const dispatch = useDispatch<AppDispatch>();
 
   // get the product data
   const product = useAppSelector((state) => state.quickViewReducer.value);
+
+  // Initialize variations when product changes
+  useEffect(() => {
+    if (product?.variations) {
+      const initialVars: Record<string, string> = {};
+      product.variations.forEach(v => {
+        if (v.options.length > 0) {
+          initialVars[v.label] = v.options[0];
+        }
+      });
+      setSelectedVariations(initialVars);
+    }
+  }, [product]);
+
   const wishlistItems = useSelector(selectWishlistItems);
   const isInWishlist = wishlistItems.some((i) => i.id === product.id);
 
@@ -43,6 +58,7 @@ const QuickViewModal = () => {
       addItemToCartDb({
         ...product,
         quantity,
+        selectedVariations,
       })
     );
 
@@ -241,6 +257,31 @@ const QuickViewModal = () => {
                 Lorem Ipsum is simply dummy text of the printing and typesetting
                 industry. Lorem Ipsum has.
               </p>
+
+              {product.variations && product.variations.length > 0 && (
+                <div className="flex flex-col gap-4 mt-6">
+                  {product.variations.map((v) => (
+                    <div key={v.id} className="flex flex-col gap-2">
+                      <h4 className="font-semibold text-dark">{v.label}</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {v.options.map((option, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedVariations(prev => ({ ...prev, [v.label]: option }))}
+                            className={`px-3 py-1 text-sm rounded-md border transition-all ${
+                              selectedVariations[v.label] === option
+                                ? "border-blue bg-blue text-white"
+                                : "border-gray-3 text-dark hover:border-blue"
+                            }`}
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex flex-wrap justify-between gap-5 mt-6 mb-7.5">
                 <div>

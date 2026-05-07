@@ -32,17 +32,17 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // getSession decodes the JWT cookie locally — no network call, no RLS
-  const { data: { session } } = await supabase.auth.getSession();
+  // getUser() re-validates the session against the server — secure and recommended
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/signin";
     return NextResponse.redirect(url);
   }
 
   // is_admin is stored in app_metadata (server-controlled, not forgeable)
-  const isAdmin = session.user.app_metadata?.is_admin === true;
+  const isAdmin = user.app_metadata?.is_admin === true;
 
   if (!isAdmin) {
     const url = request.nextUrl.clone();

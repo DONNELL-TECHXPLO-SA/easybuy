@@ -116,6 +116,14 @@ const Signin = () => {
                 {errors.password && (
                   <p className="text-red text-sm mt-1">{errors.password}</p>
                 )}
+                <div className="flex justify-end mt-2">
+                  <Link
+                    href="/forgot-password"
+                    className="text-custom-sm text-dark hover:text-blue ease-out duration-200"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
               </div>
 
               <button

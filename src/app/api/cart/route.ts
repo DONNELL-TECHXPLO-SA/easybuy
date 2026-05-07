@@ -21,6 +21,7 @@ export async function GET() {
         id,
         quantity,
         product_id,
+        selected_variations,
         products (
           id,
           title,
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { product_id, quantity = 1 } = body;
+    const { product_id, quantity = 1, selected_variations = {} } = body;
 
     if (!product_id) {
       return NextResponse.json(
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
       .select("id, quantity")
       .eq("user_id", user.id)
       .eq("product_id", product_id)
+      .eq("selected_variations", selected_variations)
       .maybeSingle() as { data: { id: string; quantity: number } | null };
 
     if (existing) {
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("cart_items")
-      .insert({ user_id: user.id, product_id, quantity } as never)
+      .insert({ user_id: user.id, product_id, quantity, selected_variations } as never)
       .select()
       .single();
 
