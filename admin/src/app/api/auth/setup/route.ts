@@ -136,13 +136,14 @@ export async function GET() {
     const { data: users } = await adminClient.auth.admin.listUsers();
 
     const adminUsers =
-      users?.users
-        .filter((u) => u.email_confirmed_at)
+      (users?.users || []).filter(
+        (u: { email_confirmed_at?: string | null }) => u.email_confirmed_at
+      )
         .map((u) => ({
           id: u.id,
           email: u.email,
           createdAt: u.created_at,
-        })) || [];
+        }));
 
     return NextResponse.json({
       message: "Auth setup endpoint ready",

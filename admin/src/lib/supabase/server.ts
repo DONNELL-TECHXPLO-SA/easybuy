@@ -3,19 +3,26 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+function getSupabaseEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error("Missing Supabase environment variables for admin server client");
+  if (!url || !anonKey) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables for admin server client"
+    );
+  }
+
+  return { url, anonKey };
 }
 
 export async function createClient() {
+  const { url, anonKey } = getSupabaseEnv();
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -34,9 +41,12 @@ export async function createClient() {
 }
 
 export function createAdminClient() {
+  const { url, anonKey } = getSupabaseEnv();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
   return createSupabaseClient<Database>(
-    SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY,
+    url,
+    serviceRoleKey || anonKey,
     {
       auth: {
         autoRefreshToken: false,

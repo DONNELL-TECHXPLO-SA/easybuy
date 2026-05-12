@@ -1,7 +1,7 @@
 "use client";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import type { Testimonial } from "@/types/testimonial";
 import Image from "next/image";
 
@@ -15,6 +15,7 @@ const Testimonials = () => {
   const [items, setItems] = useState<Testimonial[]>([]);
 
   useEffect(() => {
+    const supabase = createClient();
     supabase
       .from("testimonials")
       .select("review, author_name, author_role, author_img")
