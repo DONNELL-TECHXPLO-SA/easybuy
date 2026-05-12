@@ -1,6 +1,8 @@
 import { requireAdmin } from "@/lib/auth";
 import OrdersTable from "@/components/Orders/OrdersTable";
 
+export const dynamic = 'force-dynamic';
+
 export default async function OrdersPage() {
   await requireAdmin();
   return (

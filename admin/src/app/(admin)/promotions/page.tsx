@@ -1,6 +1,8 @@
 import { requireAdmin } from "@/lib/auth";
 import PromotionsTable from "@/components/Promotions/PromotionsTable";
 
+export const dynamic = 'force-dynamic';
+
 export default async function PromotionsPage() {
   await requireAdmin();
   return (

@@ -4,6 +4,8 @@ import StatCard from "@/components/ui/StatCard";
 import Link from "next/link";
 import { formatZar } from "@/lib/formatCurrency";
 
+export const dynamic = 'force-dynamic';
+
 interface RecentOrder {
   id: string;
   status: string;

@@ -1,6 +1,8 @@
 import { requireAdmin } from "@/lib/auth";
 import SettingsForm from "@/components/Settings/SettingsForm";
 
+export const dynamic = 'force-dynamic';
+
 export default async function SettingsPage() {
   await requireAdmin();
   return (

@@ -1,6 +1,8 @@
 import { requireAdmin } from "@/lib/auth";
 import ProductsTable from "@/components/Products/ProductsTable";
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProductsPage() {
   await requireAdmin();
   return (
