@@ -13,6 +13,7 @@ export default function CategoriesTable() {
   const [selected, setSelected] = useState<Category | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -58,14 +59,56 @@ export default function CategoriesTable() {
     finally { setSubmitting(false); }
   };
 
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", "category");
+
+    setUploading(true);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setForm((f) => ({ ...f, img: data.url }));
+    } catch {
+      setError("Failed to upload image.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const FormFields = (
     <div className="space-y-4">
       <div><label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
         <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-      <div><label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-        <input value={form.img} onChange={(e) => setForm({ ...form, img: e.target.value })}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
+        {form.img ? (
+          <div className="relative inline-block group">
+            <img src={form.img} alt="Category" className="w-32 h-20 object-cover rounded-lg border border-gray-200" />
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, img: "" })}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+            >✕</button>
+          </div>
+        ) : (
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadImage(file);
+              }}
+              disabled={uploading}
+              className="w-full"
+            />
+            {uploading && <p className="text-xs text-blue-600 mt-2">Uploading...</p>}
+          </div>
+        )}
+      </div>
       <div><label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
         <input type="number" min={0} value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
@@ -74,6 +117,7 @@ export default function CategoriesTable() {
 
   const columns = [
     { header: "ID", render: (c: Category) => <span className="font-mono text-xs text-gray-400">{c.id}</span>, className: "w-14" },
+    { header: "Image", render: (c: Category) => c.img ? <img src={c.img} alt={c.title} className="w-12 h-8 object-cover rounded" /> : <span className="text-xs text-gray-400">—</span> },
     { header: "Name", render: (c: Category) => <span className="font-medium text-gray-900">{c.title}</span> },
     { header: "Sort", render: (c: Category) => <span>{c.sort_order}</span> },
     { header: "Actions", className: "text-right", render: (c: Category) => (

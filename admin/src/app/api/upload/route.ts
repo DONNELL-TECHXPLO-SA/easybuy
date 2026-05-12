@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
+export const runtime = "nodejs";
+
 async function assertAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return null;
@@ -17,10 +19,10 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const type = formData.get("type") as string; // "thumbnail" or "preview"
+    const type = formData.get("type") as string;
 
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    if (!["thumbnail", "preview"].includes(type)) {
+    if (!["thumbnail", "preview", "category"].includes(type)) {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
 
@@ -30,8 +32,15 @@ export async function POST(req: NextRequest) {
     const filename = `${type}/${timestamp}-${random}-${file.name}`;
 
     const adminClient = createAdminClient();
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("Upload error: SUPABASE_SERVICE_ROLE_KEY is not set in environment variables");
+      return NextResponse.json({ error: "Server configuration error: missing service role key" }, { status: 500 });
+    }
+
+    const bucket = type === "category" ? "category_images" : "product images";
+
     const { error: uploadError, data } = await adminClient.storage
-      .from("product images")
+      .from(bucket)
       .upload(filename, buffer, {
         contentType: file.type,
         upsert: false,
@@ -43,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: publicUrlData } = adminClient.storage
-      .from("product images")
+      .from(bucket)
       .getPublicUrl(filename);
 
     return NextResponse.json({ url: publicUrlData.publicUrl });
