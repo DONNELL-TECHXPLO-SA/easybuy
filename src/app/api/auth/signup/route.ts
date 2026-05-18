@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
         await supabase.auth.admin.generateLink({
           type: "signup",
           email,
+          password,
           options: { redirectTo },
         });
 
