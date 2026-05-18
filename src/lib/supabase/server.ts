@@ -17,13 +17,12 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, options),
             );
-          } catch {
-          }
+          } catch {}
         },
       },
-    }
+    },
   );
 }
 
@@ -31,7 +30,7 @@ export function createAdminClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceRoleKey) {
     throw new Error(
-      "Missing SUPABASE_SERVICE_ROLE_KEY environment variable for admin server client"
+      "Missing SUPABASE_SERVICE_ROLE_KEY environment variable for admin server client",
     );
   }
 
@@ -43,6 +42,6 @@ export function createAdminClient() {
         autoRefreshToken: false,
         persistSession: false,
       },
-    }
+    },
   );
 }

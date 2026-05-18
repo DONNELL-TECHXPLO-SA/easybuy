@@ -12,7 +12,9 @@ const Signin = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+    {},
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   const validate = () => {
@@ -63,7 +65,7 @@ const Signin = () => {
       toast.error(
         error instanceof Error
           ? error.message
-          : "An unexpected error occurred. Please try again."
+          : "An unexpected error occurred. Please try again.",
       );
       setIsLoading(false);
     }
@@ -142,7 +144,10 @@ const Signin = () => {
 
               <p className="text-center mt-6">
                 Don&apos;t have an account?{" "}
-                <Link href="/signup" className="text-dark ease-out duration-200 hover:text-blue">
+                <Link
+                  href="/signup"
+                  className="text-dark ease-out duration-200 hover:text-blue"
+                >
                   Sign Up Now!
                 </Link>
               </p>

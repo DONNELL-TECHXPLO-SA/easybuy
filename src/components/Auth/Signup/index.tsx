@@ -80,7 +80,7 @@ const Signup = () => {
         const message =
           typeof data === "string"
             ? data
-            : data?.error ?? "Sign up failed. Please try again.";
+            : (data?.error ?? "Sign up failed. Please try again.");
         toast.error(message);
         return;
       }
@@ -91,7 +91,7 @@ const Signup = () => {
       toast.error(
         error instanceof Error
           ? error.message
-          : "An unexpected error occurred. Please try again."
+          : "An unexpected error occurred. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -191,7 +191,9 @@ const Signup = () => {
                     }`}
                   />
                   {errors.confirmPassword && (
-                    <p className="text-red text-sm mt-1">{errors.confirmPassword}</p>
+                    <p className="text-red text-sm mt-1">
+                      {errors.confirmPassword}
+                    </p>
                   )}
                 </div>
 
@@ -205,7 +207,10 @@ const Signup = () => {
 
                 <p className="text-center mt-6">
                   Already have an account?
-                  <Link href="/signin" className="text-dark ease-out duration-200 hover:text-blue pl-2">
+                  <Link
+                    href="/signin"
+                    className="text-dark ease-out duration-200 hover:text-blue pl-2"
+                  >
                     Sign in Now
                   </Link>
                 </p>

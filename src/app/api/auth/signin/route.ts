@@ -8,7 +8,14 @@ export async function POST(request: NextRequest) {
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: "Too many sign-in attempts. Please try again later." },
-        { status: 429, headers: { "Retry-After": String(Math.ceil((rateCheck.resetAt - Date.now()) / 1000)) } }
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(
+              Math.ceil((rateCheck.resetAt - Date.now()) / 1000),
+            ),
+          },
+        },
       );
     }
 
@@ -18,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!email || !password) {
       return NextResponse.json(
         { error: "Email and password are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
             });
           },
         },
-      }
+      },
     );
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -49,7 +56,9 @@ export async function POST(request: NextRequest) {
     if (error) {
       const message = (() => {
         const text = error.message ?? "";
-        if (/email.*(not confirmed|not verified|verify|confirmation)/i.test(text)) {
+        if (
+          /email.*(not confirmed|not verified|verify|confirmation)/i.test(text)
+        ) {
           return "Please verify your email before signing in. Check your inbox for the verification link.";
         }
         return text || "Invalid email or password";
@@ -57,7 +66,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         { error: message },
-        { status: error.status ?? 400 }
+        { status: error.status ?? 400 },
       );
     }
 
@@ -77,7 +86,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

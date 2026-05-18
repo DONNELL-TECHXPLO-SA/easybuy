@@ -43,30 +43,29 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    const { data: createData, error: createError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: false,
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName,
-        full_name: fullName,
-      },
-    });
+    const { data: createData, error: createError } =
+      await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: false,
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName,
+          full_name: fullName,
+        },
+      });
 
     if (createError) {
-      const text = createError.message ?? "Could not create account. Please try again.";
+      const text =
+        createError.message ?? "Could not create account. Please try again.";
       const message = /already exists|duplicate/i.test(text)
         ? "An account with this email already exists"
         : text;
       const status = /already exists|duplicate/i.test(text)
         ? 409
-        : createError.status ?? 400;
+        : (createError.status ?? 400);
 
-      return NextResponse.json(
-        { error: message },
-        { status }
-      );
+      return NextResponse.json({ error: message }, { status });
     }
 
     const userId = createData?.user?.id;
@@ -87,7 +86,10 @@ export async function POST(request: NextRequest) {
       }
 
       if (linkData?.properties?.action_link) {
-        await sendEmailVerificationEmail(email, linkData.properties.action_link);
+        await sendEmailVerificationEmail(
+          email,
+          linkData.properties.action_link,
+        );
         verificationSent = true;
       }
     } catch (linkError) {
