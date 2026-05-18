@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { withRateLimit } from "@/lib/api-utils";
 
 export async function POST(request: NextRequest) {
   try {
+    const rateCheck = withRateLimit(request, 3);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 },
+      );
+    }
+
     const { email } = await request.json();
 
     if (!email) {
@@ -18,7 +27,7 @@ export async function POST(request: NextRequest) {
             return request.cookies.getAll();
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
+            cookiesToSet.forEach(({ name, value }) => {
               request.cookies.set(name, value);
             });
           },
@@ -31,12 +40,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: "Could not process password reset" }, { status: 400 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("Forgot password error:", err);
+  } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 }

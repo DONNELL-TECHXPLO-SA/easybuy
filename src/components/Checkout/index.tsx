@@ -3,6 +3,7 @@ import React from "react";
 import { useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
@@ -20,6 +21,7 @@ import { checkoutSchema, CheckoutFormData } from "./checkoutSchema";
 import { formatZar } from "@/lib/formatCurrency";
 import { FieldErrors } from "react-hook-form";
 import { ShippingMethodQuote } from "@/types/shipping";
+import { useAuth } from "@/app/context/AuthContext";
 
 type ShippingQuoteResponse = {
   subtotal: number;
@@ -44,16 +46,18 @@ const buildDestinationFromForm = (data: CheckoutFormData) => {
   }
 
   return {
-    country: data.billing.country.trim(),
-    region: data.billing.region?.trim() || "",
-    city: data.billing.city.trim(),
-    postalCode: data.billing.postalCode.trim(),
+    country: data.billing?.country?.trim() || "",
+    region: data.billing?.region?.trim() || "",
+    city: data.billing?.city?.trim() || "",
+    postalCode: data.billing?.postalCode?.trim() || "",
   };
 };
 
 const Checkout = () => {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
+  const { user, loading: authLoading } = useAuth();
+  const authenticated = !!user;
   const cartItems = useSelector((state: RootState) => state.cartReducer.items);
   const [cartReady, setCartReady] = React.useState(false);
   const [quote, setQuote] = React.useState<ShippingQuoteResponse | null>(null);
@@ -103,10 +107,10 @@ const Checkout = () => {
     return () => {
       isMounted = false;
     };
-  }, [dispatch]);
+  }, [dispatch, authenticated]);
 
   React.useEffect(() => {
-    if (!cartReady) return;
+    if (!cartReady || !authenticated) return;
 
     if (cartItems.length === 0) {
       setQuote(null);
@@ -195,6 +199,7 @@ const Checkout = () => {
     shippingPostalCode,
     getValues,
     setValue,
+    authenticated,
   ]);
 
   const subtotal =
@@ -301,6 +306,67 @@ const Checkout = () => {
 
     toast.error("Please complete the required checkout fields.");
   };
+
+  if (authLoading) {
+    return (
+      <>
+        <Breadcrumb title={"Checkout"} pages={["checkout"]} />
+        <section className="overflow-hidden py-20 bg-gray-2">
+          <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0 text-center">
+            <p className="text-dark-4">Loading...</p>
+          </div>
+        </section>
+      </>
+    );
+  }
+
+  if (!user) {
+    return (
+      <>
+        <Breadcrumb title={"Checkout"} pages={["checkout"]} />
+        <section className="overflow-hidden py-20 bg-gray-2">
+          <div className="max-w-[570px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+            <div className="rounded-xl bg-white shadow-1 p-4 sm:p-7.5 xl:p-11 text-center">
+              <h2 className="font-semibold text-xl sm:text-2xl xl:text-heading-5 text-dark mb-4">
+                Sign in to continue
+              </h2>
+              <p className="text-dark-4 mb-8 leading-relaxed">
+                Please{" "}
+                <Link
+                  href="/signin?redirectTo=/checkout"
+                  className="text-blue font-medium hover:underline"
+                >
+                  sign in
+                </Link>{" "}
+                to your existing account or{" "}
+                <Link
+                  href="/signup?redirectTo=/checkout"
+                  className="text-blue font-medium hover:underline"
+                >
+                  create a new account
+                </Link>{" "}
+                to continue with the checkout process.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  href="/signin?redirectTo=/checkout"
+                  className="inline-flex justify-center font-medium text-white bg-blue py-3 px-8 rounded-md ease-out duration-200 hover:bg-blue-dark"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup?redirectTo=/checkout"
+                  className="inline-flex justify-center font-medium text-dark bg-gray-3 py-3 px-8 rounded-md ease-out duration-200 hover:bg-gray-4"
+                >
+                  Create Account
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </>
+    );
+  }
 
   return (
     <>

@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  productionBrowserSourceMaps: false,
+  compress: true,
   images: {
     remotePatterns: [
       {
@@ -11,14 +13,14 @@ const nextConfig = {
         hostname: "encrypted-tbn0.gstatic.com",
       },
     ],
+    formats: ["image/avif", "image/webp"],
   },
-  experimental: {
-    workerThreads: false,
-    cpus: 1,
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
   },
-  turbopack: {
-    root: __dirname,
-  },
+  poweredByHeader: false,
+  reactStrictMode: true,
 };
 
 module.exports = nextConfig;

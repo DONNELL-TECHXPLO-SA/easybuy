@@ -28,9 +28,16 @@ export async function createClient() {
 }
 
 export function createAdminClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    throw new Error(
+      "Missing SUPABASE_SERVICE_ROLE_KEY environment variable for admin server client"
+    );
+  }
+
   return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    serviceRoleKey,
     {
       auth: {
         autoRefreshToken: false,

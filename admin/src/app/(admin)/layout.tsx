@@ -2,9 +2,13 @@ import { requireAdmin } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { profile } = await requireAdmin();
 
   return (

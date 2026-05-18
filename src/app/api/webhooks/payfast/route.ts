@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   sendOrderConfirmationEmail,
@@ -6,48 +6,54 @@ import {
 } from "@/lib/email-service";
 import { generatePayFastSignature } from "@/lib/payfast";
 
+const PAYFAST_SERVER_IPS = [
+  "197.189.236.42",
+  "197.189.236.43",
+];
+
+function isPayFastRequest(request: NextRequest): boolean {
+  if (process.env.PAYFAST_SANDBOX === "true") return true;
+
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || request.headers.get("x-real-ip")
+    || "";
+
+  return PAYFAST_SERVER_IPS.includes(ip);
+}
+
 export async function POST(req: NextRequest) {
   try {
+    if (!isPayFastRequest(req)) {
+      return new Response("Forbidden", { status: 403 });
+    }
+
     const formData = await req.formData();
     const data: Record<string, string> = {};
     formData.forEach((value, key) => {
       data[key] = value.toString();
     });
 
-    console.log("[PayFast Webhook] Received ITN:", data);
-
     const signature = data.signature;
     const passphrase = process.env.PAYFAST_PASSPHRASE;
 
-    // 1. Verify Signature
     const calculatedSignature = generatePayFastSignature(data, passphrase);
 
     if (signature !== calculatedSignature) {
-      console.error("[PayFast Webhook] Signature mismatch", {
-        received: signature,
-        calculated: calculatedSignature,
-      });
       return new Response("Invalid signature", { status: 400 });
     }
 
-    // 2. Verify Payment Status
     if (data.payment_status !== "COMPLETE") {
-      console.log(
-        `[PayFast Webhook] Payment not complete: ${data.payment_status}`
-      );
       return new Response("OK", { status: 200 });
     }
 
     const orderId = data.m_payment_id;
 
     if (!orderId) {
-      console.error("[PayFast Webhook] Missing m_payment_id");
       return new Response("Missing order ID", { status: 400 });
     }
 
     const supabase = createAdminClient();
 
-    // 3. Fetch order and items
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("*, order_items(*)")
@@ -55,27 +61,21 @@ export async function POST(req: NextRequest) {
       .single() as any;
 
     if (orderError || !order) {
-      console.error("[PayFast Webhook] Order not found:", orderId);
       return new Response("Order not found", { status: 404 });
     }
 
-    // 4. Only process if not already processed
-    if (order.status === "processing") {
-      console.log("[PayFast Webhook] Order already processed:", orderId);
+    if (order.status === "processing" || order.status === "delivered") {
       return new Response("OK", { status: 200 });
     }
 
-    // 5. Update order status
     const updateResult = await ((supabase.from("orders") as unknown) as any)
       .update({ status: "processing", updated_at: new Date().toISOString() })
       .eq("id", orderId);
 
     if (updateResult.error) {
-      console.error("[PayFast Webhook] Failed to update order:", updateResult.error);
       return new Response("Update failed", { status: 500 });
     }
 
-    // 6. Clear cart for user
     const cartResult = await ((supabase.from("cart_items") as unknown) as any)
       .delete()
       .eq("user_id", order.user_id);
@@ -84,7 +84,6 @@ export async function POST(req: NextRequest) {
       console.error("[PayFast Webhook] Failed to clear cart:", cartResult.error);
     }
 
-    // 7. Send emails
     const formattedOrderDate = new Date(order.created_at).toLocaleDateString(
       "en-ZA",
       {
@@ -125,15 +124,10 @@ export async function POST(req: NextRequest) {
     await Promise.all([
       sendOrderConfirmationEmail(emailParams),
       sendAdminOrderNotification(emailParams),
-    ]).catch((err) => {
-      console.error("[PayFast Webhook] Failed to send emails:", err);
-    });
-
-    console.log("[PayFast Webhook] Order processed successfully:", orderId);
+    ]).catch(() => {});
 
     return new Response("OK", { status: 200 });
-  } catch (error) {
-    console.error("[PayFast Webhook] Error processing webhook:", error);
+  } catch {
     return new Response("Internal Server Error", { status: 500 });
   }
 }

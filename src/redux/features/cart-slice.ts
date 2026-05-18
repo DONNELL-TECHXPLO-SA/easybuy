@@ -127,6 +127,36 @@ export const clearCartDb = createAsyncThunk(
   }
 );
 
+export const mergeCartWithDb = createAsyncThunk(
+  "cart/mergeWithDb",
+  async (items: CartItem[], { rejectWithValue }) => {
+    const res = await fetch("/api/cart/merge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+    if (!res.ok) {
+      if (res.status === 401) return rejectWithValue("unauthenticated");
+      return rejectWithValue("Failed to merge cart");
+    }
+    const json = await res.json();
+    return json.items as Array<{
+      id: string;
+      quantity: number;
+      product_id: number;
+      selected_variations: Record<string, string>;
+      products: {
+        id: number;
+        title: string;
+        price: number;
+        discounted_price: number;
+        thumbnail_images: string[];
+        preview_images: string[];
+      };
+    }>;
+  }
+);
+
 const areVariationsSame = (v1?: Record<string, string>, v2?: Record<string, string>) => {
   if (!v1 && !v2) return true;
   if (!v1 || !v2) return false;
@@ -176,6 +206,22 @@ export const cart = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchCartFromDb.fulfilled, (state, action) => {
+        if (!action.payload || action.meta.requestStatus !== "fulfilled") return;
+        state.items = action.payload.map((row) => ({
+          id: row.products.id,
+          dbItemId: row.id,
+          title: row.products.title,
+          price: row.products.price,
+          discountedPrice: row.products.discounted_price,
+          quantity: row.quantity,
+          selectedVariations: row.selected_variations,
+          imgs: {
+            thumbnails: row.products.thumbnail_images,
+            previews: row.products.preview_images,
+          },
+        }));
+      })
+      .addCase(mergeCartWithDb.fulfilled, (state, action) => {
         if (!action.payload || action.meta.requestStatus !== "fulfilled") return;
         state.items = action.payload.map((row) => ({
           id: row.products.id,

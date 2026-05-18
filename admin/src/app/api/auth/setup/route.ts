@@ -4,6 +4,29 @@ import { NextRequest, NextResponse } from "next/server";
 const ALLOW_ADMIN_SETUP = process.env.ALLOW_ADMIN_SETUP === "true";
 const ADMIN_SETUP_SECRET_KEY = process.env.ADMIN_SETUP_SECRET_KEY;
 
+const ipRequestCounts = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = ipRequestCounts.get(ip);
+
+  if (!entry || now >= entry.resetAt) {
+    ipRequestCounts.set(ip, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+
+  entry.count += 1;
+  if (entry.count > 5) return false;
+
+  return true;
+}
+
+function getClientIp(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return request.headers.get("x-real-ip") || "127.0.0.1";
+}
+
 function isSetupAllowed(secretKey?: string) {
   return (
     ALLOW_ADMIN_SETUP &&
@@ -12,13 +35,15 @@ function isSetupAllowed(secretKey?: string) {
   );
 }
 
-/**
- * POST /api/auth/setup
- * Creates or updates an admin user with given credentials
- * Body: { email: string, password: string, firstName?: string, lastName?: string }
- */
 export async function POST(request: NextRequest) {
   try {
+    if (!checkRateLimit(getClientIp(request))) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 },
+      );
+    }
+
     if (!ALLOW_ADMIN_SETUP || !ADMIN_SETUP_SECRET_KEY) {
       return NextResponse.json(
         { error: "Admin setup is disabled" },
@@ -41,13 +66,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters" },
+        { status: 400 },
+      );
+    }
+
     if (!isSetupAllowed(secretKey)) {
       return NextResponse.json({ error: "Invalid setup key" }, { status: 401 });
     }
 
     const adminClient = createAdminClient();
 
-    // Check if user already exists
     const { data: existingUsers } = await adminClient.auth.admin.listUsers();
     const existingUser = (existingUsers?.users ?? []).find(
       (u: { id: string; email?: string | null }) => u.email === email,
@@ -56,14 +87,11 @@ export async function POST(request: NextRequest) {
     let userId: string;
 
     if (existingUser) {
-      // Update password for existing user
       await adminClient.auth.admin.updateUserById(existingUser.id, {
         password,
       });
       userId = existingUser.id;
-      console.log(`Updated password for existing user: ${email}`);
     } else {
-      // Create new user
       const { data, error } = await adminClient.auth.admin.createUser({
         email,
         password,
@@ -72,16 +100,14 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         return NextResponse.json(
-          { error: `Failed to create user: ${error.message}` },
+          { error: "Failed to create user. Check credentials." },
           { status: 400 },
         );
       }
 
       userId = data.user.id;
-      console.log(`Created new user: ${email}`);
     }
 
-    // Ensure user_profiles entry exists with is_admin = true
     const { error: profileError } = await adminClient
       .from("user_profiles")
       .upsert(
@@ -96,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       return NextResponse.json(
-        { error: `Failed to set admin status: ${profileError.message}` },
+        { error: "Failed to set admin status" },
         { status: 400 },
       );
     }
@@ -110,19 +136,14 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 },
     );
-  } catch (error) {
-    console.error("Setup error:", error);
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: "An unexpected error occurred" },
       { status: 500 },
     );
   }
 }
 
-/**
- * GET /api/auth/setup
- * Returns status of auth setup (for testing)
- */
 export async function GET() {
   try {
     if (!ALLOW_ADMIN_SETUP || !ADMIN_SETUP_SECRET_KEY) {
@@ -132,29 +153,12 @@ export async function GET() {
       );
     }
 
-    const adminClient = createAdminClient();
-    const { data: users } = await adminClient.auth.admin.listUsers();
-
-    const adminUsers =
-      (users?.users || []).filter(
-        (u: { email_confirmed_at?: string | null }) => u.email_confirmed_at
-      )
-        .map((u) => ({
-          id: u.id,
-          email: u.email,
-          createdAt: u.created_at,
-        }));
-
     return NextResponse.json({
-      message: "Auth setup endpoint ready",
-      totalUsers: users?.users.length || 0,
-      confirmedUsers: adminUsers.length,
-      users: adminUsers,
+      message: "Admin setup endpoint is available (POST to create admin user)",
     });
-  } catch (error) {
-    console.error("GET error:", error);
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: "An unexpected error occurred" },
       { status: 500 },
     );
   }

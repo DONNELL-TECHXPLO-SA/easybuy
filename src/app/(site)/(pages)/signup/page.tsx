@@ -1,5 +1,5 @@
 import Signup from "@/components/Auth/Signup";
-import React from "react";
+import React, { Suspense } from "react";
 
 import { Metadata } from "next";
 export const metadata: Metadata = {
@@ -11,7 +11,9 @@ export const metadata: Metadata = {
 const SignupPage = () => {
   return (
     <main>
-      <Signup />
+      <Suspense fallback={<div className="py-20 text-center">Loading...</div>}>
+        <Signup />
+      </Suspense>
     </main>
   );
 };

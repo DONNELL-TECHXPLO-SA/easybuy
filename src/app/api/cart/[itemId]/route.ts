@@ -37,7 +37,7 @@ export async function PATCH(
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to update cart item" }, { status: 500 });
     }
 
     if (!data) {
@@ -78,7 +78,7 @@ export async function DELETE(
       .eq("user_id", user.id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to remove cart item" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

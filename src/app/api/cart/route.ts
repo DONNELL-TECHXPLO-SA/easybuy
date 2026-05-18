@@ -36,7 +36,7 @@ export async function GET() {
       .order("created_at", { ascending: true });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to process cart item" }, { status: 500 });
     }
 
     return NextResponse.json({ items: data });
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Failed to process cart item" }, { status: 500 });
       }
 
       return NextResponse.json({ item: data });
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to process cart item" }, { status: 500 });
     }
 
     return NextResponse.json({ item: data }, { status: 201 });
@@ -133,7 +133,7 @@ export async function DELETE() {
       .eq("user_id", user.id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to clear cart" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

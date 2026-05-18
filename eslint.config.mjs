@@ -11,6 +11,7 @@ export default [
   {
     rules: {
       "react-hooks/set-state-in-effect": "off",
+      "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
 ];

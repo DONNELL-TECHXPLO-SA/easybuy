@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[Products] Fetch error:", error);
+      return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
     }
 
     return NextResponse.json({

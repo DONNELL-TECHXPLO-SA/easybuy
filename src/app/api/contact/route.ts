@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { sendContactFormEmail } from "@/lib/email-service";
+import { withRateLimit } from "@/lib/api-utils";
 
 const contactSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -14,12 +15,20 @@ const contactSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const rateCheck = withRateLimit(request, 5);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many messages. Please try again later." },
+        { status: 429 },
+      );
+    }
+
     const body = await request.json();
     const parsed = contactSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Validation failed", details: parsed.error.flatten() },
+        { error: "Validation failed" },
         { status: 400 },
       );
     }
@@ -29,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("contact_messages")
       .insert({
         first_name,
@@ -39,15 +48,12 @@ export async function POST(request: NextRequest) {
         message,
         email,
       } as never)
-      .select()
-      .maybeSingle();
 
     if (error) {
       console.error("[Contact API] Database error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to save message" }, { status: 500 });
     }
 
-    // Send confirmation emails using EmailJS (non-blocking)
     sendContactFormEmail({
       name: `${first_name} ${last_name}`,
       email,
@@ -56,18 +62,13 @@ export async function POST(request: NextRequest) {
       message,
     }).catch((err) => {
       console.error("[Contact API] Failed to send emails:", err);
-      // Don't fail the request if email fails - the message is already saved
     });
 
     return NextResponse.json(
-      {
-        message: "Message sent successfully. We'll get back to you shortly!",
-        data,
-      },
+      { message: "Message sent successfully. We'll get back to you shortly!" },
       { status: 201 },
     );
-  } catch (error) {
-    console.error("[Contact API] Unexpected error:", error);
+  } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 },

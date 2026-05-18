@@ -2,12 +2,13 @@
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import Link from "next/link";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { createClient } from "@/lib/supabase/client";
 
 const Signup = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") ?? "/my-account";
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,8 +38,8 @@ const Signup = () => {
     }
     if (!password) {
       newErrors.password = "Password is required";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
     }
     if (!confirmPassword) {
       newErrors.confirmPassword = "Please confirm your password";
@@ -62,29 +63,36 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
-      const nameParts = fullName.trim().split(" ");
-      const firstName = nameParts[0] ?? "";
-      const lastName = nameParts.slice(1).join(" ") ?? "";
-
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { first_name: firstName, last_name: lastName, full_name: fullName },
-        },
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, fullName }),
       });
 
-      if (signUpError) {
-        toast.error(signUpError.message ?? "Sign up failed. Please try again.");
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        data = await res.text();
+      }
+
+      if (!res.ok) {
+        const message =
+          typeof data === "string"
+            ? data
+            : data?.error ?? "Sign up failed. Please try again.";
+        toast.error(message);
         return;
       }
 
-      toast.success("Account created! Welcome.");
-      router.refresh();
-      router.push("/my-account");
-    } catch {
-      toast.error("An unexpected error occurred. Please try again.");
+      toast.success("Account created! Check your email to verify.");
+      router.push("/verify-email");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }

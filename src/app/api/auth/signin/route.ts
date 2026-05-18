@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { withRateLimit } from "@/lib/api-utils";
 
 export async function POST(request: NextRequest) {
   try {
+    const rateCheck = withRateLimit(request, 10);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many sign-in attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rateCheck.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     const body = await request.json();
     const { email, password } = body;
 
@@ -38,11 +47,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      const message = (() => {
+        const text = error.message ?? "";
+        if (/email.*(not confirmed|not verified|verify|confirmation)/i.test(text)) {
+          return "Please verify your email before signing in. Check your inbox for the verification link.";
+        }
+        return text || "Invalid email or password";
+      })();
+
+      return NextResponse.json(
+        { error: message },
+        { status: error.status ?? 400 }
+      );
     }
 
-    // Re-build the response now that we have the user, reusing the same
-    // response object so cookies set above are preserved.
     const successResponse = NextResponse.json({
       success: true,
       user: {
@@ -51,15 +69,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Copy cookies from the interim response to the final one
     response.cookies.getAll().forEach(({ name, value, ...options }) => {
       successResponse.cookies.set(name, value, options);
     });
 
     return successResponse;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "An unexpected error occurred";
-    console.error("Signin error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
   }
 }

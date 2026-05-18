@@ -8,6 +8,7 @@ import {
   ShippingRateRule,
   ShippingZone,
 } from "@/types/shipping";
+import { withRateLimit } from "@/lib/api-utils";
 
 const quoteSchema = z.object({
   destination: z.object({
@@ -29,6 +30,14 @@ const toStringArray = (value: unknown): string[] => {
 
 export async function POST(request: NextRequest) {
   try {
+    const rateCheck = withRateLimit(request, 30);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 },
+      );
+    }
+
     const supabase = await createClient();
 
     const {

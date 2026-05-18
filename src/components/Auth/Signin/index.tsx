@@ -4,7 +4,6 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { createClient } from "@/lib/supabase/client";
 
 const Signin = () => {
   const router = useRouter();
@@ -44,12 +43,15 @@ const Signin = () => {
     setIsLoading(true);
 
     try {
-      // Sign in via browser client so onAuthStateChange fires and header updates immediately
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (error) {
-        toast.error(error.message ?? "Sign in failed. Please try again.");
+      const data = await response.json();
+      if (!response.ok) {
+        toast.error(data.error || "Sign in failed. Please try again.");
         setIsLoading(false);
         return;
       }
@@ -57,8 +59,12 @@ const Signin = () => {
       toast.success("Signed in successfully!");
       router.refresh();
       router.push(redirectTo);
-    } catch {
-      toast.error("An unexpected error occurred. Please try again.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred. Please try again."
+      );
       setIsLoading(false);
     }
   };

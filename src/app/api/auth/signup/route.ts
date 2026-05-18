@@ -1,22 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/supabase/server";
+import { sendEmailVerificationEmail } from "@/lib/email-service";
+import { withRateLimit } from "@/lib/api-utils";
 
 export async function POST(request: NextRequest) {
   try {
+    const rateCheck = withRateLimit(request, 5);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many sign-up attempts. Please try again later." },
+        { status: 429 },
+      );
+    }
+
     const body = await request.json();
     const { email, password, fullName } = body;
 
     if (!email || !password || !fullName) {
       return NextResponse.json(
         { error: "Email, password, and full name are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
-        { status: 400 }
+        { error: "Password must be at least 8 characters" },
+        { status: 400 },
+      );
+    }
+
+    if (password.length > 128) {
+      return NextResponse.json(
+        { error: "Password must be less than 128 characters" },
+        { status: 400 },
       );
     }
 
@@ -24,49 +41,71 @@ export async function POST(request: NextRequest) {
     const firstName = nameParts[0] ?? "";
     const lastName = nameParts.slice(1).join(" ") ?? "";
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll: () => [], setAll: () => {} } }
-    );
+    const supabase = createAdminClient();
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data: createData, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: { first_name: firstName, last_name: lastName, full_name: fullName },
+      email_confirm: false,
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+        full_name: fullName,
       },
     });
 
-    if (error) {
-      // Surface the exact Supabase error to the client
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
+    if (createError) {
+      const text = createError.message ?? "Could not create account. Please try again.";
+      const message = /already exists|duplicate/i.test(text)
+        ? "An account with this email already exists"
+        : text;
+      const status = /already exists|duplicate/i.test(text)
+        ? 409
+        : createError.status ?? 400;
 
-    // Supabase returns a fake user object when email confirmation is required
-    // but the user doesn't exist yet — identities array will be empty in that case.
-    // When email confirmation is disabled, identities will have one entry.
-    if (!data.user) {
       return NextResponse.json(
-        { error: "Could not create account. Please try again." },
-        { status: 400 }
+        { error: message },
+        { status }
       );
     }
 
-    if (data.user.identities?.length === 0) {
-      // Email confirmation is enabled — user must confirm before signing in
-      return NextResponse.json(
-        { error: "Please check your email to confirm your account before signing in." },
-        { status: 400 }
-      );
+    const userId = createData?.user?.id;
+    const redirectTo = `${request.nextUrl.origin}/auth/callback`;
+    let verificationSent = false;
+
+    try {
+      const { data: linkData, error: linkError } =
+        await supabase.auth.admin.generateLink({
+          type: "signup",
+          email,
+          options: { redirectTo },
+        });
+
+      if (linkError) {
+        throw linkError;
+      }
+
+      if (linkData?.properties?.action_link) {
+        await sendEmailVerificationEmail(email, linkData.properties.action_link);
+        verificationSent = true;
+      }
+    } catch (linkError) {
+      if (userId) {
+        await supabase.auth.admin.updateUserById(userId, {
+          email_confirm: true,
+        });
+      }
     }
 
-    // Profile row is created automatically by the handle_new_user trigger on auth.users
-
-    return NextResponse.json({ success: true }, { status: 201 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "An unexpected error occurred";
-    console.error("Signup error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { success: true, verificationSent },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Signup unexpected error:", error);
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 },
+    );
   }
 }

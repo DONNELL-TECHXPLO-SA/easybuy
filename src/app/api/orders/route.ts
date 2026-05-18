@@ -9,6 +9,7 @@ import {
   ShippingRateRule,
   ShippingZone,
 } from "@/types/shipping";
+import { withRateLimit } from "@/lib/api-utils";
 
 const toStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -49,24 +50,6 @@ const checkoutSchema = z.object({
     .min(1, "Shipping method is required")
     .default("free"),
   notes: z.string().optional().default(""),
-  cartItems: z
-    .array(
-      z.object({
-        id: z.number(),
-        title: z.string(),
-        price: z.number(),
-        discountedPrice: z.number(),
-        quantity: z.number().int().positive(),
-        selectedVariations: z.record(z.string(), z.string()).optional(),
-        imgs: z
-          .object({
-            thumbnails: z.array(z.string()).optional(),
-            previews: z.array(z.string()).optional(),
-          })
-          .optional(),
-      }),
-    )
-    .optional(),
 });
 
 export async function GET() {
@@ -116,12 +99,12 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[Orders GET] Database error:", error);
+      return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
     }
 
     return NextResponse.json({ orders: data });
-  } catch (error) {
-    console.error("[Order] Order creation error:", error);
+  } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 },
@@ -131,6 +114,14 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const rateCheck = withRateLimit(request, 10);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 },
+      );
+    }
+
     const supabase = await createClient();
 
     const {
@@ -157,7 +148,6 @@ export async function POST(request: NextRequest) {
       shipping,
       shippingMethod,
       notes,
-      cartItems: clientCartItems,
     } = parsed.data;
 
     const { data: cartItems, error: cartError } = (await supabase
@@ -197,20 +187,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const effectiveCartItems =
-      cartItems && cartItems.length > 0
-        ? cartItems
-        : clientCartItems?.map((item) => ({
-            quantity: item.quantity,
-            selected_variations: item.selectedVariations || {},
-            products: {
-              id: item.id,
-              title: item.title,
-              price: item.price,
-              discounted_price: item.discountedPrice,
-              thumbnail_images: item.imgs?.thumbnails ?? [],
-            },
-          }));
+    const effectiveCartItems = cartItems;
 
     if (!effectiveCartItems || effectiveCartItems.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -430,7 +407,6 @@ export async function POST(request: NextRequest) {
     }
 
     const orderId = (order as { id: string }).id;
-    console.debug("[Order] Order created successfully:", orderId);
 
     const orderItemsPayload = effectiveCartItems.map((item) => ({
       order_id: orderId,
@@ -455,14 +431,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create PayFast Redirect URL
-    try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      
-      if (!process.env.PAYFAST_MERCHANT_ID || !process.env.PAYFAST_MERCHANT_KEY) {
-        throw new Error("Missing PayFast merchant credentials in environment variables");
-      }
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+    if (!process.env.PAYFAST_MERCHANT_ID || !process.env.PAYFAST_MERCHANT_KEY) {
+      return NextResponse.json(
+        { error: "Payment gateway is not configured. Please contact support." },
+        { status: 500 },
+      );
+    }
+
+    try {
       const redirectUrl = getPayFastUrl({
         merchant_id: process.env.PAYFAST_MERCHANT_ID,
         merchant_key: process.env.PAYFAST_MERCHANT_KEY,
@@ -478,21 +456,17 @@ export async function POST(request: NextRequest) {
         passphrase: process.env.PAYFAST_PASSPHRASE,
       });
 
-      console.debug("[Order] PayFast URL generated:", redirectUrl);
-
       return NextResponse.json(
         { order, redirectUrl },
         { status: 201 },
       );
-    } catch (payfastError) {
-      console.error("[Order] PayFast URL generation failed:", payfastError);
+    } catch {
       return NextResponse.json(
         { error: "Failed to initialize payment gateway" },
         { status: 500 },
       );
     }
-  } catch (error) {
-    console.error("[Order] Order creation error:", error);
+  } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred" },
       { status: 500 },

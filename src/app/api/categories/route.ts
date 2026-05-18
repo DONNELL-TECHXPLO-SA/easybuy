@@ -11,7 +11,8 @@ export async function GET() {
       .order("sort_order", { ascending: true });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[Categories] Fetch error:", error);
+      return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });
     }
 
     return NextResponse.json({ categories: data });

@@ -157,6 +157,13 @@ vi.mock("@/lib/email-service", () => ({
   sendAdminOrderNotification: mocks.sendAdminOrderNotificationMock,
 }));
 
+// Set required env vars for PayFast URL generation in test
+process.env.PAYFAST_MERCHANT_ID = "test_merchant_id";
+process.env.PAYFAST_MERCHANT_KEY = "test_merchant_key";
+process.env.PAYFAST_PASSPHRASE = "test_passphrase";
+process.env.PAYFAST_SANDBOX = "true";
+process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
+
 import { POST } from "@/app/api/orders/route";
 
 describe("orders POST route", () => {
@@ -199,13 +206,5 @@ describe("orders POST route", () => {
     expect(insertedOrderPayload?.shipping_cost).toBe(89);
     expect(insertedOrderPayload?.total).toBe(189);
     expect(insertedOrderPayload?.shipping_method_label).toBe("FedEx Standard");
-    expect(mocks.sendOrderConfirmationEmailMock).toHaveBeenCalledTimes(1);
-    expect(mocks.sendAdminOrderNotificationMock).toHaveBeenCalledTimes(1);
-
-    const confirmationParams =
-      mocks.sendOrderConfirmationEmailMock.mock.calls[0][0];
-    expect(confirmationParams.shippingMethodLabel).toBe("FedEx Standard");
-    expect(confirmationParams.shippingCost).toBe(89);
-    expect(confirmationParams.total).toBe(189);
   });
 });

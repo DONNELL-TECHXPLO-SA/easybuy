@@ -22,7 +22,8 @@ export async function GET(
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[Product] Fetch error:", error);
+      return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });
     }
 
     if (!data) {
