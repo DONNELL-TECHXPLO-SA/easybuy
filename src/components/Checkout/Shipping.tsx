@@ -2,12 +2,31 @@ import React, { useState } from "react";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { CheckoutFormData } from "./checkoutSchema";
 
+type SavedAddress = {
+  id: string;
+  type: string;
+  first_name: string;
+  last_name: string;
+  company: string;
+  country: string;
+  street_address: string;
+  street_address_2: string;
+  city: string;
+  region: string;
+  postal_code: string;
+  phone: string;
+  email: string;
+  is_default: boolean;
+};
+
 type Props = {
   register: UseFormRegister<CheckoutFormData>;
   errors: FieldErrors<CheckoutFormData>;
+  savedAddresses?: SavedAddress[];
+  onSelectAddress?: (address: SavedAddress) => void;
 };
 
-const Shipping = ({ register, errors }: Props) => {
+const Shipping = ({ register, errors, savedAddresses, onSelectAddress }: Props) => {
   const [dropdown, setDropdown] = useState(false);
 
   return (
@@ -35,6 +54,33 @@ const Shipping = ({ register, errors }: Props) => {
       </div>
 
       <div className={`p-4 sm:p-8.5 ${dropdown ? "block" : "hidden"}`}>
+        {savedAddresses && savedAddresses.length > 0 && onSelectAddress && (
+          <div className="mb-6">
+            <label className="block mb-3 font-medium text-dark">
+              Select a saved shipping address
+            </label>
+            <select
+              className="rounded-md border border-gray-3 bg-gray-1 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
+              onChange={(e) => {
+                const addr = savedAddresses.find(
+                  (a) => a.id === e.target.value,
+                );
+                if (addr) onSelectAddress(addr);
+              }}
+              defaultValue=""
+            >
+              <option value="" disabled>
+                -- Choose a saved address --
+              </option>
+              {savedAddresses.map((addr) => (
+                <option key={addr.id} value={addr.id}>
+                  {addr.first_name} {addr.last_name} —{" "}
+                  {addr.street_address}, {addr.city}, {addr.country}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 mb-5">
           <div className="w-full">
             <label htmlFor="shipping.firstName" className="block mb-2.5">

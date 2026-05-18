@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 
@@ -24,6 +24,15 @@ const AccountDetailsTab = ({ profile, onProfileUpdated }: Props) => {
   });
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    setForm({
+      first_name: profile?.first_name ?? "",
+      last_name: profile?.last_name ?? "",
+      phone: profile?.phone ?? "",
+      country: profile?.country ?? "",
+    });
+  }, [profile]);
+
   const inputClass =
     "rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20";
 
@@ -45,17 +54,17 @@ const AccountDetailsTab = ({ profile, onProfileUpdated }: Props) => {
 
       const { data, error } = await supabase
         .from("user_profiles")
-        .update(form as never)
+        .update(form)
         .eq("id", session.user.id)
         .select("first_name, last_name, phone, country")
-        .maybeSingle() as { data: Profile | null; error: unknown };
+        .single() as { data: Profile | null; error: unknown };
 
-      if (error) {
+      if (error || !data) {
         toast.error("Failed to update profile.");
         return;
       }
 
-      if (data) onProfileUpdated(data);
+      onProfileUpdated(data);
       toast.success("Profile updated.");
     } catch {
       toast.error("An unexpected error occurred.");

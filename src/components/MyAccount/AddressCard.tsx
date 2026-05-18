@@ -11,6 +11,8 @@ type Address = {
   street_address: string;
   street_address_2: string;
   city: string;
+  region: string;
+  postal_code: string;
   phone: string;
   email: string;
   is_default: boolean;
@@ -110,7 +112,10 @@ const AddressCard = ({ address, onEdit, onDelete }: Props) => {
             <span className="font-medium">Address:</span>{" "}
             {address.street_address}
             {address.street_address_2 ? `, ${address.street_address_2}` : ""},
-            {" "}{address.city}, {address.country}
+            {" "}{address.city}
+            {address.region ? `, ${address.region}` : ""}
+            {address.postal_code ? ` ${address.postal_code}` : ""},{" "}
+            {address.country}
           </p>
         </div>
       </div>

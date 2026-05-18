@@ -13,6 +13,8 @@ type Address = {
   street_address: string;
   street_address_2: string;
   city: string;
+  region: string;
+  postal_code: string;
   phone: string;
   email: string;
   is_default: boolean;
@@ -34,6 +36,8 @@ const emptyAddress: Address = {
   street_address: "",
   street_address_2: "",
   city: "",
+  region: "",
+  postal_code: "",
   phone: "",
   email: "",
   is_default: false,
@@ -44,11 +48,9 @@ const AddressModal = ({ isOpen, closeModal, address, onSaved }: Props) => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (address) {
-      setForm(address);
-    } else {
-      setForm(emptyAddress);
-    }
+    setForm(address
+      ? { ...emptyAddress, ...address, region: address.region ?? "", postal_code: address.postal_code ?? "" }
+      : emptyAddress);
   }, [address, isOpen]);
 
   useEffect(() => {
@@ -99,6 +101,8 @@ const AddressModal = ({ isOpen, closeModal, address, onSaved }: Props) => {
         street_address: form.street_address,
         street_address_2: form.street_address_2,
         city: form.city,
+        region: form.region,
+        postal_code: form.postal_code,
         phone: form.phone,
         email: form.email,
         is_default: form.is_default,
@@ -318,6 +322,38 @@ const AddressModal = ({ isOpen, closeModal, address, onSaved }: Props) => {
                   onChange={handleChange}
                   placeholder="Cape Town"
                   required
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="w-full">
+                <label htmlFor="region" className="block mb-2.5">
+                  Province / Region
+                </label>
+                <input
+                  type="text"
+                  id="region"
+                  name="region"
+                  value={form.region}
+                  onChange={handleChange}
+                  placeholder="e.g. Gauteng"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 mb-5">
+              <div className="w-full">
+                <label htmlFor="postal_code" className="block mb-2.5">
+                  Postal Code
+                </label>
+                <input
+                  type="text"
+                  id="postal_code"
+                  name="postal_code"
+                  value={form.postal_code}
+                  onChange={handleChange}
+                  placeholder="e.g. 2191"
                   className={inputClass}
                 />
               </div>

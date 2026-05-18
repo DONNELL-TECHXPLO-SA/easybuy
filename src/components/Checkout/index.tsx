@@ -22,6 +22,24 @@ import { formatZar } from "@/lib/formatCurrency";
 import { FieldErrors } from "react-hook-form";
 import { ShippingMethodQuote } from "@/types/shipping";
 import { useAuth } from "@/app/context/AuthContext";
+import { createClient } from "@/lib/supabase/client";
+
+type SavedAddress = {
+  id: string;
+  type: string;
+  first_name: string;
+  last_name: string;
+  company: string;
+  country: string;
+  street_address: string;
+  street_address_2: string;
+  city: string;
+  region: string;
+  postal_code: string;
+  phone: string;
+  email: string;
+  is_default: boolean;
+};
 
 type ShippingQuoteResponse = {
   subtotal: number;
@@ -64,6 +82,7 @@ const Checkout = () => {
   const [quoteLoading, setQuoteLoading] = React.useState(false);
   const [quoteError, setQuoteError] = React.useState<string | null>(null);
   const [quoteStale, setQuoteStale] = React.useState(true);
+  const [savedAddresses, setSavedAddresses] = React.useState<SavedAddress[]>([]);
 
   const {
     register,
@@ -88,6 +107,19 @@ const Checkout = () => {
   const shippingRegion = watch("shipping.region");
   const shippingCity = watch("shipping.city");
   const shippingPostalCode = watch("shipping.postalCode");
+
+  React.useEffect(() => {
+    if (!authenticated || !user) return;
+    const supabase = createClient();
+    (async () => {
+      const { data } = await supabase
+        .from("addresses")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("is_default", { ascending: false });
+      if (data) setSavedAddresses(data as SavedAddress[]);
+    })();
+  }, [authenticated, user]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -210,6 +242,31 @@ const Checkout = () => {
     );
   const shippingCost = quote?.shippingCost ?? 0;
   const total = quote?.total ?? subtotal;
+
+  const handleSelectBillingAddress = (address: SavedAddress) => {
+    setValue("billing.firstName", address.first_name);
+    setValue("billing.lastName", address.last_name);
+    setValue("billing.company", address.company);
+    setValue("billing.country", address.country);
+    setValue("billing.address", address.street_address);
+    setValue("billing.address2", address.street_address_2);
+    setValue("billing.city", address.city);
+    setValue("billing.region", address.region);
+    setValue("billing.postalCode", address.postal_code);
+    setValue("billing.phone", address.phone);
+    setValue("billing.email", address.email);
+  };
+
+  const handleSelectShippingAddress = (address: SavedAddress) => {
+    setValue("shipping.firstName", address.first_name);
+    setValue("shipping.lastName", address.last_name);
+    setValue("shipping.country", address.country);
+    setValue("shipping.address", address.street_address);
+    setValue("shipping.address2", address.street_address_2);
+    setValue("shipping.city", address.city);
+    setValue("shipping.region", address.region);
+    setValue("shipping.postalCode", address.postal_code);
+  };
 
   const onSubmit = async (data: CheckoutFormData) => {
     if (!cartReady) {
@@ -376,11 +433,45 @@ const Checkout = () => {
           <form onSubmit={handleSubmit(onSubmit, onInvalid)}>
             <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-11">
               <div className="lg:max-w-[670px] w-full">
-                <Login />
+                {!authenticated && <Login />}
+
+                {savedAddresses.length > 0 && (
+                  <div className="bg-white shadow-1 rounded-[10px] p-4 sm:p-8.5 mb-7.5">
+                    <label className="block mb-3 font-medium text-dark">
+                      Select a saved billing address
+                    </label>
+                    <select
+                      className="rounded-md border border-gray-3 bg-gray-1 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
+                      onChange={(e) => {
+                        const addr = savedAddresses.find(
+                          (a) => a.id === e.target.value,
+                        );
+                        if (addr) handleSelectBillingAddress(addr);
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>
+                        -- Choose a saved address --
+                      </option>
+                      {savedAddresses.map((addr) => (
+                        <option key={addr.id} value={addr.id}>
+                          {addr.first_name} {addr.last_name} —{" "}
+                          {addr.street_address}, {addr.city},{" "}
+                          {addr.country}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <Billing register={register} errors={errors} />
 
-                <Shipping register={register} errors={errors} />
+                <Shipping
+                  register={register}
+                  errors={errors}
+                  savedAddresses={savedAddresses}
+                  onSelectAddress={handleSelectShippingAddress}
+                />
 
                 <div className="bg-white shadow-1 rounded-[10px] p-4 sm:p-8.5 mt-7.5">
                   <div>

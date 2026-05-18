@@ -29,6 +29,8 @@ type Address = {
   street_address: string;
   street_address_2: string;
   city: string;
+  region: string;
+  postal_code: string;
   phone: string;
   email: string;
   is_default: boolean;
@@ -191,13 +193,10 @@ const MyAccount = () => {
             <div className="xl:max-w-[370px] w-full bg-white rounded-xl shadow-1">
               <div className="flex xl:flex-col">
                 <div className="hidden lg:flex flex-wrap items-center gap-5 py-6 px-4 sm:px-7.5 xl:px-9 border-r xl:border-r-0 xl:border-b border-gray-3">
-                  <div className="max-w-[64px] w-full h-16 rounded-full overflow-hidden">
-                    <Image
-                      src="/images/users/user-04.jpg"
-                      alt="user"
-                      width={64}
-                      height={64}
-                    />
+                  <div className="max-w-[64px] w-full h-16 rounded-full overflow-hidden bg-gray-1 flex items-center justify-center">
+                    <svg className="fill-dark-5" width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 4a3 3 0 100 6 3 3 0 000-6zm-6 11.2c0-2 4-3.1 6-3.1s6 1.1 6 3.1V18H6v-.8z" />
+                    </svg>
                   </div>
                   <div>
                     <p className="font-medium text-dark mb-0.5">{fullName}</p>
