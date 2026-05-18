@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/types/database";
 
 type Profile = {
   first_name: string;
@@ -9,6 +10,8 @@ type Profile = {
   phone: string;
   country: string;
 };
+
+type UserProfileUpdate = Database["public"]["Tables"]["user_profiles"]["Update"];
 
 type Props = {
   profile: Profile | null;
@@ -52,8 +55,7 @@ const AccountDetailsTab = ({ profile, onProfileUpdated }: Props) => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("user_profiles")
+      const { data, error } = await (supabase.from("user_profiles") as any)
         .update(form)
         .eq("id", session.user.id)
         .select("first_name, last_name, phone, country")
